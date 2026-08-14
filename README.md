@@ -1,5 +1,7 @@
 # CareAgent
 
+[![CI](https://github.com/wananan233/CareAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/wananan233/CareAgent/actions/workflows/ci.yml)
+
 CareHub 2.0 的本地优先照护建议编排器。它不是设备控制器、医疗诊断系统或自治急救决策器。
 
 ## 当前 Gate：G2.3（受控基础聊天与本地网页界面）
@@ -15,6 +17,7 @@ G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状
 - **G2.3 网页界面**：浏览器端最多保留三轮历史；令牌和历史不写入数据库或磁盘。
 - **G2.4 可追溯回答**：DeepSeek 只能输出授权事实索引；服务端将其映射为 `AgentResponseV1.facts`，拒绝越界引用。
 - **G2.5 运行保护**：本地 HTTP API 按已认证用户限制为每分钟最多 10 次请求，限流状态仅保存在内存。
+- **G2.6 持续验证**：GitHub Actions 会在每次推送和 Pull Request 中执行全量测试。
 
 ### 已冻结的边界
 
