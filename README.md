@@ -4,9 +4,9 @@
 
 CareHub 2.0 的本地优先照护建议编排器。它不是设备控制器、医疗诊断系统或自治急救决策器。
 
-## 当前 Gate：G3（Memory、Consent 与隐私）
+## 当前 Gate：G5（可观测性、重放与故障注入）
 
-G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状态投影与合成设备模拟器。G2 在其上实现不依赖模型的 CareAgent MVP。G3 新增结构化与工作记忆、同意账本、RBAC+ABAC、数据删除与敏感日志扫描；仍不接入真实硬件、通知或模型。
+G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状态投影与合成设备模拟器。G2 在其上实现不依赖模型的 CareAgent MVP。G3 新增结构化与工作记忆、同意账本、RBAC+ABAC、数据删除与敏感日志扫描。G4 增加默认离线 FakeProvider、目的最小化、固定 Schema、安全扫描与模板降级，仅开放今日状态和日报。G5 增加最小化 Trace/Metrics、确定性重放报告与故障注入证据。G4 另提供可选的 DeepSeek Provider，密钥只从独立进程环境变量读取。
 
 ## 能力概览
 
