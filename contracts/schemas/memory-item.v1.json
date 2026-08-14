@@ -2,19 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://carehub.local/contracts/MemoryItemV1",
   "title": "MemoryItemV1",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema_version", "memory_id", "type", "value", "source_event_ids", "consent_scope", "status", "owner", "valid_from", "expires_at"],
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "memory_id", "type", "value", "source_event_ids", "confidence", "sensitivity", "consent_scope", "status", "owner", "valid_from", "expires_at", "revoke_method"],
   "properties": {
-    "schema_version": {"const": "MemoryItemV1"},
-    "memory_id": {"type": "string", "minLength": 8},
-    "type": {"type": "string", "enum": ["PREFERENCE", "HABIT", "ADDRESS_FORM"]},
-    "value": {"type": "string", "minLength": 1},
-    "source_event_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "schema_version": {"const": "MemoryItemV1"}, "memory_id": {"type": "string", "minLength": 8},
+    "type": {"enum": ["WORKING", "PREFERENCE", "HABIT", "ADDRESS_FORM", "EPISODIC_VIEW"]},
+    "value": {}, "source_event_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "sensitivity": {"type": "string", "minLength": 1},
     "consent_scope": {"type": "string", "minLength": 1},
-    "status": {"type": "string", "enum": ["CANDIDATE", "POLICY_ACCEPTED", "CONFIRMED", "ACTIVE", "REVOKED", "EXPIRED"]},
+    "status": {"enum": ["CANDIDATE", "POLICY_ACCEPTED", "CONFIRMED", "ACTIVE", "REVOKED", "EXPIRED"]},
     "owner": {"type": "string", "pattern": "^user:[a-zA-Z0-9_-]+$"},
-    "valid_from": {"type": "string", "format": "date-time"},
-    "expires_at": {"type": "string", "format": "date-time"}
+    "valid_from": {"type": "string", "format": "date-time"}, "expires_at": {"type": "string", "format": "date-time"},
+    "revoke_method": {"const": "OWNER_REVOKE"}
   }
 }

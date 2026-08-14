@@ -4,9 +4,9 @@
 
 CareHub 2.0 的本地优先照护建议编排器。它不是设备控制器、医疗诊断系统或自治急救决策器。
 
-## 当前 Gate：G2（确定性 CareAgent MVP）
+## 当前 Gate：G3（Memory、Consent 与隐私）
 
-G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状态投影与合成设备模拟器。G2 在其上实现不依赖模型的 CareAgent MVP：ContextSnapshot、AgentRun、CareTask、确定性 Planner、Policy Gateway、Mock Skill Executor、固定 Response 模板及 UI/TTS/Family Mock；不接入真实硬件、通知或模型。
+G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状态投影与合成设备模拟器。G2 在其上实现不依赖模型的 CareAgent MVP。G3 新增结构化与工作记忆、同意账本、RBAC+ABAC、数据删除与敏感日志扫描；仍不接入真实硬件、通知或模型。
 
 ## 能力概览
 
