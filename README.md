@@ -18,6 +18,7 @@ G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状
 - **G2.4 可追溯回答**：DeepSeek 只能输出授权事实索引；服务端将其映射为 `AgentResponseV1.facts`，拒绝越界引用。
 - **G2.5 运行保护**：本地 HTTP API 按已认证用户限制为每分钟最多 10 次请求，限流状态仅保存在内存。
 - **G2.6 持续验证**：GitHub Actions 会在每次推送和 Pull Request 中执行全量测试。
+- **G2 验收收口**：HTTP 请求结果记录为不含消息正文的审计哈希链；完整范围见 [G2 验收文档](docs/G2_ACCEPTANCE.md)。
 
 ### 已冻结的边界
 

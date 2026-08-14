@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sqlite3
 from threading import RLock
 from pathlib import Path
@@ -145,3 +146,24 @@ class EventStore:
     def journal_mode(self) -> str:
         with self._lock:
             return self.connection.execute("PRAGMA journal_mode").fetchone()[0]
+
+    def record_audit(self, *, actor: str, capability: str, decision: str, reason: str, resource: str) -> str:
+        """追加不含请求正文的审计记录，并返回不可变哈希链节点。"""
+        with self._lock, self.connection:
+            previous = self.connection.execute("SELECT hash_chain FROM audit_entry ORDER BY id DESC LIMIT 1").fetchone()
+            material = json.dumps(
+                {"previous": previous["hash_chain"] if previous else "", "actor": actor, "capability": capability,
+                 "decision": decision, "reason": reason, "resource": resource},
+                ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+            )
+            hash_chain = hashlib.sha256(material.encode("utf-8")).hexdigest()
+            self.connection.execute(
+                "INSERT INTO audit_entry(actor, capability, decision, reason, resource, hash_chain) VALUES(?,?,?,?,?,?)",
+                (actor, capability, decision, reason, resource, hash_chain),
+            )
+            return hash_chain
+
+    def audit_entries(self) -> list[dict[str, str]]:
+        with self._lock:
+            rows = self.connection.execute("SELECT actor, capability, decision, reason, resource, hash_chain FROM audit_entry ORDER BY id").fetchall()
+        return [dict(row) for row in rows]

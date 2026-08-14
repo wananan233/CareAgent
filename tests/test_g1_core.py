@@ -219,3 +219,13 @@ def test_projection_tracks_alert_resolution_and_medication_evidence() -> None:
         "MEDICATION_DUE",
         "MEDICATION_EVIDENCE_RECORDED",
     ]
+
+
+def test_event_store_audit_chain_does_not_store_message_body(store: EventStore) -> None:
+    first = store.record_audit(actor="CARE_AGENT", capability="chat_response", decision="ALLOW", reason="CHAT_RESPONSE", resource="chat:user:synthetic-01")
+    second = store.record_audit(actor="CARE_AGENT", capability="chat_response", decision="DENY", reason="MODEL_UNAVAILABLE", resource="chat:user:synthetic-01")
+
+    entries = store.audit_entries()
+    assert first != second
+    assert [entry["decision"] for entry in entries] == ["ALLOW", "DENY"]
+    assert all("我现在有什么提醒" not in str(entry) for entry in entries)

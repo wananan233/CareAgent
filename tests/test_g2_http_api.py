@@ -107,6 +107,18 @@ def test_chat_api_rate_limits_each_authenticated_subject() -> None:
     assert (limited.status, limited.body["code"], limited.body["retryable"]) == (429, "RATE_LIMITED", True)
 
 
+def test_chat_api_records_outcome_without_request_message() -> None:
+    audit: list[tuple[str, str, str]] = []
+    api = ChatHttpApi(
+        chat_service=ChatService(), authenticator=StaticTokenAuthenticator({"token-for-user": "user:synthetic-01"}),
+        context_provider=_snapshot, audit_recorder=lambda decision, reason, resource: audit.append((decision, reason, resource)),
+    )
+    response = api.handle(method="POST", path="/v1/users/synthetic-01/chat", headers={"Authorization": "Bearer token-for-user"}, body=json.dumps({"message": "私密问题"}).encode())
+
+    assert response.status == 200
+    assert audit == [("ALLOW", "CHAT_RESPONSE", "chat:user:synthetic-01")]
+
+
 def test_local_http_server_serves_authorized_chat_without_external_model() -> None:
     server = serve_local(_api(), port=0)
     thread = threading.Thread(target=server.handle_request)

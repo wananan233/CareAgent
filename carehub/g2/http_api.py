@@ -83,11 +83,13 @@ class ChatHttpApi:
         authenticator: StaticTokenAuthenticator,
         context_provider: Callable[[str], Mapping[str, Any]],
         rate_limiter: InMemoryRateLimiter | None = None,
+        audit_recorder: Callable[[str, str, str], None] | None = None,
     ) -> None:
         self._chat_service = chat_service
         self._authenticator = authenticator
         self._context_provider = context_provider
         self._rate_limiter = rate_limiter or InMemoryRateLimiter()
+        self._audit_recorder = audit_recorder
 
     def handle(self, *, method: str, path: str, headers: Mapping[str, str], body: bytes) -> ApiResponse:
         match = CHAT_PATH.fullmatch(path)
@@ -118,10 +120,16 @@ class ChatHttpApi:
         except ValueError as error:
             return self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", str(error), retryable=False)
         except RuntimeError:
+            self._audit("DENY", "MODEL_UNAVAILABLE", subject_id)
             return self._error(HTTPStatus.BAD_GATEWAY, "MODEL_UNAVAILABLE", "模型服务暂不可用", retryable=True)
         except Exception:
             return self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "本地服务处理失败", retryable=False)
+        self._audit("ALLOW", "CHAT_RESPONSE", subject_id)
         return ApiResponse(status=HTTPStatus.OK, body=response)
+
+    def _audit(self, decision: str, reason: str, subject_id: str) -> None:
+        if self._audit_recorder:
+            self._audit_recorder(decision, reason, f"chat:{subject_id}")
 
     @staticmethod
     def _error(status: HTTPStatus, code: str, message: str, *, retryable: bool) -> ApiResponse:

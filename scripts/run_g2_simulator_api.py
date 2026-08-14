@@ -30,6 +30,9 @@ api = ChatHttpApi(
     context_provider=lambda authenticated_subject: core.build_chat_context(
         subject_id=authenticated_subject, consent_expires_at=expires_at
     ),
+    audit_recorder=lambda decision, reason, resource: core.store.record_audit(
+        actor="CARE_AGENT", capability="chat_response", decision=decision, reason=reason, resource=resource
+    ),
 )
 server = serve_local(api)
 print(f"CareHub G2.2 已监听 http://127.0.0.1:8080/v1/users/{user_id}/chat", flush=True)
