@@ -1,0 +1,13 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "CareHub CareAgent API", "version": "1.0.0-g0", "description": "G0 mock API. 所有写操作均须携带 command_id、idempotency_key、expected_version。"},
+  "paths": {
+    "/internal/v1/events:batch": {"post": {"summary": "写入已标准化事件", "responses": {"202": {"description": "accepted"}}}},
+    "/internal/v1/agent-runs": {"post": {"summary": "创建 AgentRun", "responses": {"202": {"description": "accepted"}}}},
+    "/internal/v1/agent-runs/{id}/approve": {"post": {"summary": "批准待确认计划", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "approved"}}}},
+    "/internal/v1/model:generate": {"post": {"summary": "仅 Response/Proposal Adapter 可调用的模型网关", "responses": {"200": {"description": "schema-constrained response"}}}},
+    "/v1/users/{id}/chat": {"post": {"summary": "在已授权上下文快照内生成只读聊天回复；不会执行 Skill 或设备动作", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "AgentResponseV1"}}}},
+    "/v1/users/{id}/tasks": {"get": {"summary": "按授权读取任务", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "tasks"}}}}
+  },
+  "components": {"schemas": {"ErrorEnvelope": {"type": "object", "required": ["code", "message", "retryable", "correlation_id"], "properties": {"code": {"type": "string"}, "message": {"type": "string"}, "retryable": {"type": "boolean"}, "correlation_id": {"type": "string"}}}}}
+}

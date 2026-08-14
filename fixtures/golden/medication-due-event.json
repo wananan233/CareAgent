@@ -1,0 +1,15 @@
+{
+  "schema_version": "CareEventV1",
+  "event_id": "evt-med-due-0001",
+  "aggregate": "task:medication-morning",
+  "sequence": 1,
+  "occurred_at": "2026-08-13T08:00:00+08:00",
+  "received_at": "2026-08-13T08:00:01+08:00",
+  "source": "SIMULATOR",
+  "quality": "HIGH",
+  "privacy": "SENSITIVE",
+  "payload": {"event_type": "MEDICATION_DUE", "medication_plan_ref": "plan:synthetic-a", "evidence_state": "UNKNOWN"},
+  "checksum": "9ac3518010b316c91c4812d1d81e009c710c4d5c7b57dd63423722e4e7592c2e",
+  "correlation_id": "corr-golden-0001",
+  "trace_id": "trace-golden-0001"
+}
