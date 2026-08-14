@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://carehub.local/contracts/CareTaskV1",
+  "title": "CareTaskV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "subject_id", "kind", "status", "safety_level", "source_event_ids", "version", "updated_at"],
+  "properties": {
+    "schema_version": {"const": "CareTaskV1"},
+    "task_id": {"type": "string", "minLength": 8},
+    "subject_id": {"type": "string", "pattern": "^user:[a-zA-Z0-9_-]+$"},
+    "kind": {"type": "string", "enum": ["MEDICATION_REMINDER", "INACTIVITY_CHECK", "FALL_FOLLOW_UP", "DAILY_SUMMARY", "FAMILY_ESCALATION"]},
+    "status": {"type": "string", "enum": ["SCHEDULED", "DUE", "REMINDING", "EVIDENCE_PENDING", "EVIDENCE_RECORDED", "USER_CONFIRMED", "UNKNOWN", "MISSED", "ESCALATED", "COMPLETED"]},
+    "safety_level": {"type": "string", "enum": ["S0", "S1", "S2"]},
+    "source_event_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "reschedulable": {"type": "boolean", "default": false},
+    "max_delay_seconds": {"type": "integer", "minimum": 0},
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

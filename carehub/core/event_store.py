@@ -83,6 +83,22 @@ class EventStore:
               resource TEXT NOT NULL,
               hash_chain TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS agent_run (
+              agent_run_id TEXT PRIMARY KEY, subject_id TEXT NOT NULL, purpose TEXT NOT NULL,
+              trigger_event_ids_json TEXT NOT NULL, channel TEXT NOT NULL, status TEXT NOT NULL,
+              context_snapshot_id TEXT, plan_id TEXT, reason_code TEXT, correlation_id TEXT NOT NULL,
+              created_at TEXT NOT NULL, updated_at TEXT NOT NULL, version INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS care_task (
+              task_id TEXT PRIMARY KEY, subject_id TEXT NOT NULL, kind TEXT NOT NULL, status TEXT NOT NULL,
+              safety_level TEXT NOT NULL, source_event_ids_json TEXT NOT NULL, reschedulable INTEGER NOT NULL,
+              max_delay_seconds INTEGER, version INTEGER NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS intent_execution (
+              idempotency_key TEXT PRIMARY KEY, intent_id TEXT NOT NULL, status TEXT NOT NULL, result_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS context_snapshot (snapshot_id TEXT PRIMARY KEY, subject_id TEXT NOT NULL, purpose TEXT NOT NULL, hash TEXT NOT NULL, snapshot_json TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS agent_plan (plan_id TEXT PRIMARY KEY, agent_run_id TEXT NOT NULL, plan_json TEXT NOT NULL);
             """
         )
         self.connection.commit()
@@ -167,3 +183,53 @@ class EventStore:
         with self._lock:
             rows = self.connection.execute("SELECT actor, capability, decision, reason, resource, hash_chain FROM audit_entry ORDER BY id").fetchall()
         return [dict(row) for row in rows]
+
+    def create_agent_run(self, run: dict[str, Any]) -> bool:
+        with self._lock, self.connection:
+            if self.connection.execute("SELECT 1 FROM agent_run WHERE agent_run_id=?", (run["agent_run_id"],)).fetchone():
+                return False
+            self.connection.execute("INSERT INTO agent_run VALUES(:agent_run_id,:subject_id,:purpose,:trigger_event_ids_json,:channel,:status,:context_snapshot_id,:plan_id,:reason_code,:correlation_id,:created_at,:updated_at,:version)", {**run, "trigger_event_ids_json": json.dumps(run["trigger_event_ids"], ensure_ascii=False)})
+            return True
+
+    def agent_run(self, agent_run_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            row = self.connection.execute("SELECT * FROM agent_run WHERE agent_run_id=?", (agent_run_id,)).fetchone()
+        if not row:
+            return None
+        value = dict(row); value["trigger_event_ids"] = json.loads(value.pop("trigger_event_ids_json")); return value
+
+    def transition_agent_run(self, agent_run_id: str, expected_version: int, **changes: Any) -> dict[str, Any]:
+        with self._lock, self.connection:
+            assignments = ", ".join(f"{key}=?" for key in changes)
+            updated = self.connection.execute(f"UPDATE agent_run SET {assignments}, version=? WHERE agent_run_id=? AND version=?", [*changes.values(), expected_version + 1, agent_run_id, expected_version]).rowcount
+            if updated != 1:
+                raise ValueError("AgentRun 版本冲突或不存在")
+        result = self.agent_run(agent_run_id); assert result; return result
+
+    def upsert_care_task(self, task: dict[str, Any]) -> None:
+        with self._lock, self.connection:
+            self.connection.execute("INSERT INTO care_task VALUES(:task_id,:subject_id,:kind,:status,:safety_level,:source_event_ids_json,:reschedulable,:max_delay_seconds,:version,:updated_at) ON CONFLICT(task_id) DO UPDATE SET status=excluded.status, source_event_ids_json=excluded.source_event_ids_json, version=excluded.version, updated_at=excluded.updated_at", {**task, "source_event_ids_json": json.dumps(task["source_event_ids"], ensure_ascii=False), "reschedulable": int(task.get("reschedulable", False))})
+
+    def care_tasks(self, subject_id: str) -> list[dict[str, Any]]:
+        with self._lock:
+            rows = self.connection.execute("SELECT * FROM care_task WHERE subject_id=? ORDER BY task_id", (subject_id,)).fetchall()
+        return [{**dict(row), "source_event_ids": json.loads(row["source_event_ids_json"]), "reschedulable": bool(row["reschedulable"])} for row in rows]
+
+    def execute_once(self, *, idempotency_key: str, intent_id: str, result: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        with self._lock, self.connection:
+            row = self.connection.execute("SELECT result_json FROM intent_execution WHERE idempotency_key=?", (idempotency_key,)).fetchone()
+            if row: return False, json.loads(row["result_json"])
+            self.connection.execute("INSERT INTO intent_execution VALUES(?,?,?,?)", (idempotency_key, intent_id, result["status"], json.dumps(result, ensure_ascii=False)))
+            return True, result
+
+    def save_context_snapshot(self, snapshot: dict[str, Any]) -> None:
+        with self._lock, self.connection:
+            self.connection.execute("INSERT OR IGNORE INTO context_snapshot VALUES(?,?,?,?,?)", (snapshot["snapshot_id"], snapshot["subject_id"], snapshot["purpose"], snapshot["hash"], json.dumps(snapshot, ensure_ascii=False, sort_keys=True)))
+    def context_snapshot(self, snapshot_id: str) -> dict[str, Any] | None:
+        with self._lock: row = self.connection.execute("SELECT snapshot_json FROM context_snapshot WHERE snapshot_id=?", (snapshot_id,)).fetchone()
+        return json.loads(row["snapshot_json"]) if row else None
+    def save_plan(self, plan: dict[str, Any]) -> None:
+        with self._lock, self.connection: self.connection.execute("INSERT OR IGNORE INTO agent_plan VALUES(?,?,?)", (plan["plan_id"], plan["agent_run_id"], json.dumps(plan, ensure_ascii=False, sort_keys=True)))
+    def plan(self, plan_id: str) -> dict[str, Any] | None:
+        with self._lock: row = self.connection.execute("SELECT plan_json FROM agent_plan WHERE plan_id=?", (plan_id,)).fetchone()
+        return json.loads(row["plan_json"]) if row else None

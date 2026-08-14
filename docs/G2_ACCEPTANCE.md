@@ -1,20 +1,29 @@
-# G2 本地模拟器验收
+# G2 确定性 CareAgent MVP 验收
 
-G2 在当前仓库中的完成定义是“本地、合成数据、只读聊天”版本；不代表医疗产品或真实硬件集成已获批准。
+本 Gate 依据《CareHub 2.0_CareAgent详细架构与研发任务书_V1.0_正式版》执行。G2 不接真实 LLM、真实硬件、真实通知服务或真实健康数据。
 
-## 已验收
+## 已验收能力
 
-- G1 合成事件可重放为服药任务和安全告警投影。
-- G2 仅将最小化、带事件出处的授权事实交给模型。
-- DeepSeek 通过无工具 JSON 输出返回文本和事实索引；索引在本地映射并校验。
-- CLI、回环 HTTP API 与网页界面均受 Bearer Token 用户绑定保护。
-- 令牌和最多三轮网页历史不写入数据库或磁盘。
-- HTTP 请求按用户限流；模型不可用时返回结构化可重试错误。
-- 成功或模型不可用的请求记录不含消息正文的审计哈希链。
-- GitHub Actions 对 `main` 与 Pull Request 执行全量测试。
+- `AgentRunV1` 持久化状态机：接收、上下文、规划、策略检查、执行、完成/拒绝，并使用乐观版本控制。
+- `CareTaskV1` 以主体、来源事件、状态、安全等级和版本持久化。
+- `ContextSnapshotV1` 按 purpose 构造、最小化、哈希冻结并持久化；任务事实均有来源事件。
+- Deterministic Planner 固定实现 Medication Reminder、Inactivity Check、Fall Follow-up、Daily Summary、Family Escalation。
+- Policy Gateway 对调用者、主体、能力、同意和幂等键默认拒绝。
+- Mock Skill Executor 以幂等键去重；UI/TTS/Family Mock 接收固定 Response 模板。
+- Response Engine 要求 `source_refs`，并对医疗、剂量、已服药等越界文本模板降级。
+- 重启后可恢复 AgentRun、CareTask、ContextSnapshot、Plan 与已执行 Intent。
+
+## 证据
+
+```bash
+env -u PYTHONPATH conda run -n carehub-research python -m pytest -q
+env -u PYTHONPATH conda run -n carehub-research python -m scripts.run_g2_demo
+```
+
+全套测试覆盖五工作流（其中五条演示覆盖任务书要求的至少四条闭环）、跨主体/缺少同意拒绝、Intent 幂等、AgentRun 版本冲突与数据库重启恢复。
 
 ## 明确排除
 
-- 真实硬件、真实健康数据、真实告警通知和自动执行动作。
-- 医疗诊断、剂量调整、服药确认或自治紧急决策。
-- 互联网暴露、生产身份提供商、长期会话持久化与产品化合规认定。
+- 真实模型接入及可信模型回复属于 G4。
+- 长期记忆、生产 Consent/RBAC、隐私生命周期属于 G3。
+- 真实硬件、医疗判断、剂量调整、服药确认、自治告警和真实家属通知不在本 Gate。

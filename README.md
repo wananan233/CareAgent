@@ -4,9 +4,9 @@
 
 CareHub 2.0 的本地优先照护建议编排器。它不是设备控制器、医疗诊断系统或自治急救决策器。
 
-## 当前 Gate：G2.3（受控基础聊天与本地网页界面）
+## 当前 Gate：G2（确定性 CareAgent MVP）
 
-G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状态投影与合成设备模拟器。G2 在其上增加只读、契约约束的基础聊天层：默认使用 FakeLLM，也可通过 `DEEPSEEK_API_KEY` 接入 DeepSeek；只接收 `ContextSnapshotV1`，仅输出 `AgentResponseV1`，不接入硬件或外部通知服务。G2.3 提供仅监听本机回环地址的 HTTP API 和网页聊天界面。
+G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状态投影与合成设备模拟器。G2 在其上实现不依赖模型的 CareAgent MVP：ContextSnapshot、AgentRun、CareTask、确定性 Planner、Policy Gateway、Mock Skill Executor、固定 Response 模板及 UI/TTS/Family Mock；不接入真实硬件、通知或模型。
 
 ## 能力概览
 
@@ -51,6 +51,7 @@ tests/                 G0 自动校验
 cd /home/ziyi/Desktop/Careagent
 env -u PYTHONPATH conda run -n carehub-research python -m pytest -q
 env -u PYTHONPATH conda run -n carehub-research python -m scripts.run_g1_demo
+env -u PYTHONPATH conda run -n carehub-research python -m scripts.run_g2_demo
 ```
 
 当前测试套件覆盖契约、事件幂等、死信隔离、规则安全分支、投影回放、G1→G2 授权快照、DeepSeek 适配器与本地 HTTP API。
