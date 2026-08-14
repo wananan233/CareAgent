@@ -5,10 +5,13 @@ from __future__ import annotations
 import json
 import re
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Mapping
+from threading import Lock
+from time import monotonic
 
 from .chat import ChatService
 
@@ -46,6 +49,30 @@ class StaticTokenAuthenticator:
         return self._token_subjects.get(authorization.removeprefix("Bearer "))
 
 
+class InMemoryRateLimiter:
+    """按已认证主体限流；仅保存单调时间戳，不保存消息内容。"""
+
+    def __init__(self, *, max_requests: int = 10, window_seconds: float = 60.0, clock: Callable[[], float] = monotonic) -> None:
+        if max_requests < 1 or window_seconds <= 0:
+            raise ValueError("限流参数必须为正数")
+        self._max_requests = max_requests
+        self._window_seconds = window_seconds
+        self._clock = clock
+        self._requests: dict[str, deque[float]] = {}
+        self._lock = Lock()
+
+    def allow(self, subject_id: str) -> bool:
+        now = self._clock()
+        with self._lock:
+            timestamps = self._requests.setdefault(subject_id, deque())
+            while timestamps and timestamps[0] <= now - self._window_seconds:
+                timestamps.popleft()
+            if len(timestamps) >= self._max_requests:
+                return False
+            timestamps.append(now)
+            return True
+
+
 class ChatHttpApi:
     """无状态请求处理器；对话内容既不写入 EventStore，也不写入磁盘。"""
 
@@ -55,10 +82,12 @@ class ChatHttpApi:
         chat_service: ChatService,
         authenticator: StaticTokenAuthenticator,
         context_provider: Callable[[str], Mapping[str, Any]],
+        rate_limiter: InMemoryRateLimiter | None = None,
     ) -> None:
         self._chat_service = chat_service
         self._authenticator = authenticator
         self._context_provider = context_provider
+        self._rate_limiter = rate_limiter or InMemoryRateLimiter()
 
     def handle(self, *, method: str, path: str, headers: Mapping[str, str], body: bytes) -> ApiResponse:
         match = CHAT_PATH.fullmatch(path)
@@ -70,6 +99,8 @@ class ChatHttpApi:
         requested_subject = f"user:{match.group('user_id')}"
         if subject_id != requested_subject:
             return self._error(HTTPStatus.FORBIDDEN, "SUBJECT_MISMATCH", "令牌无权访问该用户", retryable=False)
+        if not self._rate_limiter.allow(subject_id):
+            return self._error(HTTPStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "请求过于频繁，请稍后重试", retryable=True)
         try:
             request = json.loads(body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):

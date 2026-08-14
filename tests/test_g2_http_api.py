@@ -7,7 +7,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from urllib.request import Request, urlopen
 
-from carehub.g2 import ChatHttpApi, ChatService, StaticTokenAuthenticator, build_context_snapshot, serve_local
+from carehub.g2 import ChatHttpApi, ChatService, InMemoryRateLimiter, StaticTokenAuthenticator, build_context_snapshot, serve_local
 from carehub.core.service import CareCore
 from carehub.simulators.devices import DeviceSimulator
 
@@ -85,6 +85,26 @@ def test_chat_api_accepts_bounded_client_side_history() -> None:
     )
 
     assert response.status == 200
+
+
+def test_chat_api_rate_limits_each_authenticated_subject() -> None:
+    api = ChatHttpApi(
+        chat_service=ChatService(),
+        authenticator=StaticTokenAuthenticator({"token-for-user": "user:synthetic-01"}),
+        context_provider=_snapshot,
+        rate_limiter=InMemoryRateLimiter(max_requests=2, window_seconds=60),
+    )
+    request = dict(
+        method="POST",
+        path="/v1/users/synthetic-01/chat",
+        headers={"Authorization": "Bearer token-for-user"},
+        body=json.dumps({"message": "你好"}).encode(),
+    )
+
+    assert api.handle(**request).status == 200
+    assert api.handle(**request).status == 200
+    limited = api.handle(**request)
+    assert (limited.status, limited.body["code"], limited.body["retryable"]) == (429, "RATE_LIMITED", True)
 
 
 def test_local_http_server_serves_authorized_chat_without_external_model() -> None:

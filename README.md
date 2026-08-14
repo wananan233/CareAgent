@@ -14,6 +14,7 @@ G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状
 - **G2.2 本地 API**：`POST /v1/users/{id}/chat` 使用 Bearer Token 绑定用户，服务只监听 `127.0.0.1`。
 - **G2.3 网页界面**：浏览器端最多保留三轮历史；令牌和历史不写入数据库或磁盘。
 - **G2.4 可追溯回答**：DeepSeek 只能输出授权事实索引；服务端将其映射为 `AgentResponseV1.facts`，拒绝越界引用。
+- **G2.5 运行保护**：本地 HTTP API 按已认证用户限制为每分钟最多 10 次请求，限流状态仅保存在内存。
 
 ### 已冻结的边界
 
