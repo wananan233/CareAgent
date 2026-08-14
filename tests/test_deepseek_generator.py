@@ -32,12 +32,13 @@ def test_deepseek_generator_uses_compatible_endpoint_without_tools() -> None:
         captured["headers"] = dict(request.header_items())
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         captured["timeout"] = timeout
-        return _Response({"choices": [{"message": {"content": "这是安全的只读回复。"}}]})
+        return _Response({"choices": [{"message": {"content": '{"message":"这是安全的只读回复。","fact_indexes":[0]}'}}]})
 
     generator = DeepSeekGenerator(api_key="test-key", opener=opener)
+    context = {"purpose": "CHAT", "facts": [{"text": "模拟事实", "source_refs": ["evt-1"]}]}
     draft = generator.generate(
         message="你好",
-        context_snapshot={"purpose": "CHAT"},
+        context_snapshot=context,
         history=[{"role": "user", "content": "上一轮问题"}],
     )
 
@@ -45,6 +46,7 @@ def test_deepseek_generator_uses_compatible_endpoint_without_tools() -> None:
     assert captured["headers"]["Authorization"] == "Bearer test-key"
     assert captured["payload"]["model"] == "deepseek-v4-flash"
     assert "tools" not in captured["payload"]
+    assert captured["payload"]["response_format"] == {"type": "json_object"}
     assert captured["payload"]["stream"] is False
     assert captured["payload"]["messages"][-2:] == [
         {"role": "user", "content": "上一轮问题"},
@@ -52,7 +54,7 @@ def test_deepseek_generator_uses_compatible_endpoint_without_tools() -> None:
     ]
     assert draft == {
         "message": "这是安全的只读回复。",
-        "facts": [],
+        "facts": [{"text": "模拟事实", "source_refs": ["evt-1"]}],
         "fallback": "NONE",
         "generator_version": "deepseek:deepseek-v4-flash",
     }

@@ -141,6 +141,8 @@ class DeepSeekGenerator:
             "你是 CareHub 的只读照护聊天助手。仅基于提供的上下文回答；"
             "未知信息必须明确说明未知。不得给出医疗诊断、剂量调整、紧急处置指令，"
             "不得声称已执行动作，也不得调用或建议调用工具。回复使用简体中文，限 280 字。"
+            "必须输出 json 对象：{\"message\":\"回复\",\"fact_indexes\":[0]}。"
+            "fact_indexes 只能列出授权上下文 facts 数组中实际用到的从 0 开始的索引；无引用时使用空数组。"
         )
         payload = {
             "model": self.model,
@@ -153,6 +155,7 @@ class DeepSeekGenerator:
             "temperature": 0.2,
             "max_tokens": 280,
             "stream": False,
+            "response_format": {"type": "json_object"},
         }
         request = Request(
             f"{self.base_url}/chat/completions",
@@ -172,9 +175,20 @@ class DeepSeekGenerator:
             raise RuntimeError("DeepSeek 返回内容不符合预期") from error
         if not isinstance(content, str) or not content.strip():
             raise RuntimeError("DeepSeek 返回了空回复")
+        try:
+            structured = json.loads(content)
+            message = structured["message"]
+            indexes = structured.get("fact_indexes", [])
+            facts = context_snapshot.get("facts", [])
+            if not isinstance(message, str) or not isinstance(indexes, list):
+                raise ValueError
+            if any(not isinstance(index, int) or isinstance(index, bool) or index < 0 or index >= len(facts) for index in indexes):
+                raise ValueError
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            raise RuntimeError("DeepSeek 返回的引用格式不符合预期") from None
         return {
-            "message": content.strip(),
-            "facts": [],
+            "message": message.strip(),
+            "facts": [facts[index] for index in dict.fromkeys(indexes)],
             "fallback": "NONE",
             "generator_version": f"deepseek:{self.model}",
         }

@@ -13,6 +13,7 @@ G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状
 - **G2.1 状态问答**：G1 的活动告警、服药任务和未知状态可转换为可追溯的聊天事实。
 - **G2.2 本地 API**：`POST /v1/users/{id}/chat` 使用 Bearer Token 绑定用户，服务只监听 `127.0.0.1`。
 - **G2.3 网页界面**：浏览器端最多保留三轮历史；令牌和历史不写入数据库或磁盘。
+- **G2.4 可追溯回答**：DeepSeek 只能输出授权事实索引；服务端将其映射为 `AgentResponseV1.facts`，拒绝越界引用。
 
 ### 已冻结的边界
 
@@ -71,6 +72,7 @@ export DEEPSEEK_API_KEY='新生成的密钥'
 ```
 
 创建聊天服务时注入 `ChatService(DeepSeekGenerator())` 即使用 `deepseek-v4-flash`。适配器只调用无工具的 Chat Completions 接口，且最终回复仍会经过本地契约与来源校验。
+DeepSeek 输出采用 JSON 模式，回复引用只能指向 `ContextSnapshotV1.facts` 中的授权事实。
 
 配置后可运行一次只读连通性演示：
 
