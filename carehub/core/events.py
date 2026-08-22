@@ -20,6 +20,9 @@ def checksum(payload: dict[str, Any]) -> str:
 
 def new_event(
     *,
+    tenant_id: str = "tenant:synthetic",
+    subject_id: str = "user:synthetic-01",
+    household_id: str = "household:synthetic-home",
     aggregate: str,
     sequence: int,
     event_type: str,
@@ -31,17 +34,25 @@ def new_event(
     causation_id: str | None = None,
     event_id: str | None = None,
     occurred_at: str | None = None,
+    received_at: str | None = None,
+    trace_id: str | None = None,
 ) -> dict[str, Any]:
     """生成符合 CareEventV1 最小字段集的不可变事件。"""
     body = {"event_type": event_type, **(payload or {})}
     time = occurred_at or utc_now()
+    aggregate_type, aggregate_id = aggregate.split(":", maxsplit=1)
     return {
         "schema_version": "CareEventV1",
         "event_id": event_id or f"evt-{uuid.uuid4()}",
+        "tenant_id": tenant_id,
+        "subject_id": subject_id,
+        "household_id": household_id,
         "aggregate": aggregate,
+        "aggregate_type": aggregate_type,
+        "aggregate_id": aggregate_id,
         "sequence": sequence,
         "occurred_at": time,
-        "received_at": utc_now(),
+        "received_at": received_at or utc_now(),
         "source": source,
         "quality": quality,
         "privacy": privacy,
@@ -49,5 +60,5 @@ def new_event(
         "checksum": checksum(body),
         "correlation_id": correlation_id or f"corr-{uuid.uuid4()}",
         "causation_id": causation_id,
-        "trace_id": f"trace-{uuid.uuid4()}",
+        "trace_id": trace_id or f"trace-{uuid.uuid4()}",
     }

@@ -1,7 +1,12 @@
 {
   "schema_version": "CareEventV1",
   "event_id": "evt-med-due-0001",
+  "tenant_id": "tenant:synthetic",
+  "subject_id": "user:synthetic-01",
+  "household_id": "household:synthetic-home",
   "aggregate": "task:medication-morning",
+  "aggregate_type": "task",
+  "aggregate_id": "medication-morning",
   "sequence": 1,
   "occurred_at": "2026-08-13T08:00:00+08:00",
   "received_at": "2026-08-13T08:00:01+08:00",

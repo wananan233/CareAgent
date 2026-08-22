@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carehub://contracts/auth-context.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actor_id", "tenant_id"],
+  "properties": {
+    "actor_id": {"type": "string", "pattern": "^[a-z]+:[A-Za-z0-9._-]+$"},
+    "tenant_id": {"type": "string", "pattern": "^tenant:[A-Za-z0-9._-]+$"},
+    "token_id": {"type": "string"}
+  }
+}

@@ -20,23 +20,21 @@ class CareCore:
         self.store.close()
 
     def ingest(self, event: dict[str, Any]) -> list[dict[str, Any]]:
-        """规则仅处理本次新事件；同 event_id 重放不会制造重复副作用。"""
-        inserted = self.store.append(event)
-        if not inserted:
-            return []
-        self.projections.apply(event)
+        """原事件和确定性派生事件在同一事务内写入，重放不会丢失安全分支。"""
         emitted = self.rules.decide(event)
-        for derived in emitted:
-            if self.store.append(derived):
-                self.projections.apply(derived)
-        return emitted
+        batch = [event, *emitted]
+        inserted_ids = set(self.store.append_batch(batch))
+        for item in batch:
+            if item["event_id"] in inserted_ids:
+                self.projections.apply(item)
+        return [item for item in emitted if item["event_id"] in inserted_ids]
 
     def replay(self) -> Projections:
         self.projections = Projections.rebuild(self.store.events())
         return self.projections
 
     def build_chat_context(
-        self, *, subject_id: str, consent_expires_at: str
+        self, *, tenant_id: str = "tenant:synthetic", subject_id: str, household_id: str = "household:synthetic-home", consent_expires_at: str
     ) -> dict[str, Any]:
         """从当前 G1 投影构造只读、可追溯的 G2 聊天快照。"""
         from carehub.g2.context import build_chat_context_from_g1
@@ -44,6 +42,8 @@ class CareCore:
         return build_chat_context_from_g1(
             projections=self.projections,
             events=self.store.events(),
+            tenant_id=tenant_id,
             subject_id=subject_id,
+            household_id=household_id,
             consent_expires_at=consent_expires_at,
         )

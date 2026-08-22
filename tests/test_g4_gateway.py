@@ -1,6 +1,8 @@
 import json
 
-from carehub.g4 import FakeProvider, ModelGateway
+from carehub.g4 import AgentOrchestrator, FakeProvider, ModelGateway
+from carehub.core.event_store import EventStore
+from carehub.g3 import AuthContext, ConsentLedger, ServerSidePDP
 
 
 def context():
@@ -81,3 +83,14 @@ def test_deepseek_provider_missing_key_degrades_to_template(monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     result = ModelGateway(DeepSeekProvider()).generate(purpose="TODAY_STATUS", minimal_context=context())
     assert (result["fallback"], result["reason_code"]) == ("TEMPLATE_FALLBACK", "MODEL_NOT_CONFIGURED")
+
+
+def test_dlp_and_authorized_orchestrator(tmp_path):
+    assert ModelGateway().generate(purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "电话：13800000000", "source_refs": ["evt"]}]})["reason_code"] == "DLP_BLOCKED"
+    store = EventStore(tmp_path / "agent.db"); ledger = ConsentLedger(store); pdp = ServerSidePDP(store, ledger)
+    store.register_scope(tenant_id="tenant:a", household_id="household:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    result = AgentOrchestrator(store, pdp).run(context=AuthContext("user:alice", "tenant:a"), household_id="household:a", subject_id="user:alice", purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务状态 UNKNOWN", "source_refs": ["evt"]}]})
+    assert result["fallback"] == "NONE"
+    assert store.agent_run(result["agent_run_id"])["status"] == "COMPLETED"
+    assert AgentOrchestrator(store, pdp).run(context=AuthContext("user:alice", "tenant:a"), household_id="household:a", subject_id="user:alice", purpose="CHAT", minimal_context={"facts": []})["reason_code"] == "PURPOSE_DENIED"
+    store.close()

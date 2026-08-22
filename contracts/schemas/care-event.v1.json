@@ -4,11 +4,16 @@
   "title": "CareEventV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "event_id", "aggregate", "sequence", "occurred_at", "received_at", "source", "quality", "privacy", "payload", "checksum", "correlation_id"],
+  "required": ["schema_version", "event_id", "tenant_id", "subject_id", "household_id", "aggregate", "aggregate_type", "aggregate_id", "sequence", "occurred_at", "received_at", "source", "quality", "privacy", "payload", "checksum", "correlation_id"],
   "properties": {
     "schema_version": {"const": "CareEventV1"},
     "event_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{7,63}$"},
-    "aggregate": {"type": "string", "pattern": "^(user|device|task|alert):[a-zA-Z0-9_-]+$"},
+    "tenant_id": {"type": "string", "pattern": "^tenant:[a-zA-Z0-9_-]+$"},
+    "subject_id": {"type": "string", "pattern": "^user:[a-zA-Z0-9_-]+$"},
+    "household_id": {"type": "string", "pattern": "^household:[a-zA-Z0-9_-]+$"},
+    "aggregate": {"type": "string", "pattern": "^(user|device|task|alert|rule):[a-zA-Z0-9_-]+$"},
+    "aggregate_type": {"type": "string", "enum": ["user", "device", "task", "alert", "rule"]},
+    "aggregate_id": {"type": "string", "pattern": "^[a-zA-Z0-9_-]+$"},
     "sequence": {"type": "integer", "minimum": 1},
     "occurred_at": {"type": "string", "format": "date-time"},
     "received_at": {"type": "string", "format": "date-time"},
@@ -18,7 +23,7 @@
     "payload": {"type": "object"},
     "checksum": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "correlation_id": {"type": "string", "minLength": 8},
-    "causation_id": {"type": "string"},
+    "causation_id": {"type": ["string", "null"]},
     "trace_id": {"type": "string"},
     "agent_run_id": {"type": "string"}
   }

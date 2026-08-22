@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  core-and-web:
     runs-on: ubuntu-24.04
     steps:
       - name: 检出代码
@@ -20,6 +20,29 @@ jobs:
         with:
           python-version: '3.11'
       - name: 安装测试依赖
-        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
-      - name: 执行全量测试
-        run: python -m pytest -q
+        run: python -m pip install -r requirements-dev.txt
+      - name: 执行 Python 契约校验与测试
+        run: |
+          python -m scripts.validate_contracts
+          python -m pytest -q
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - name: 设置 Node 与 pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+          cache: 'pnpm'
+      - name: 安装 Web 锁定依赖
+        run: pnpm install --frozen-lockfile
+      - name: 家属端 typecheck、单元测试与构建
+        run: |
+          pnpm --filter @carehub/family-pwa test
+          pnpm --filter @carehub/family-pwa build
+      - name: 家属端端到端测试
+        run: |
+          pnpm --filter @carehub/family-pwa exec playwright install --with-deps chromium
+          pnpm --filter @carehub/family-pwa test:e2e
+      - name: 老人端接管门禁
+        run: python -m scripts.verify_b0 --require-elder-terminal
