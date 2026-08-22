@@ -1,0 +1,16 @@
+{
+  "skill_id": "get_medication_plan",
+  "version": "v1",
+  "required_capability": "read_medication",
+  "safety_level": "S1",
+  "side_effects": false,
+  "preconditions": ["subject_authorized"],
+  "idempotency_strategy": "request_key",
+  "timeout_ms": 500,
+  "retry_policy": {"max_attempts": 1},
+  "compensation": "none",
+  "offline_supported": true,
+  "allowed_callers": ["DETERMINISTIC_PLANNER", "POLICY_GATEWAY"],
+  "audit_fields": ["actor", "subject_id", "purpose", "correlation_id"],
+  "output_guarantees": ["source_event_ids", "evidence_state", "never_asserts_ingested"]
+}

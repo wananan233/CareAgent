@@ -1,0 +1,15 @@
+{
+  "skill_id": "request_play_reminder",
+  "version": "v1",
+  "required_capability": "play_prompt",
+  "safety_level": "S1",
+  "side_effects": true,
+  "preconditions": ["due_task_exists", "template_id_whitelisted", "consent_valid", "idempotency_key_present"],
+  "idempotency_strategy": "intent_idempotency_key",
+  "timeout_ms": 1000,
+  "retry_policy": {"max_attempts": 1, "retryable_errors": ["TEMPORARY_AUDIO_UNAVAILABLE"]},
+  "compensation": "emit_prompt_not_played_event",
+  "offline_supported": true,
+  "allowed_callers": ["POLICY_GATEWAY"],
+  "audit_fields": ["actor", "subject_id", "task_id", "template_id", "correlation_id"]
+}

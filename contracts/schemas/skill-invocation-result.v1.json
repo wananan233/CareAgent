@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://carehub.local/contracts/SkillInvocationResultV1",
+  "title": "SkillInvocationResultV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "invocation_id", "intent_id", "skill_id", "skill_version", "status", "evidence_event_ids"],
+  "properties": {
+    "schema_version": {"const": "SkillInvocationResultV1"},
+    "invocation_id": {"type": "string", "minLength": 8},
+    "intent_id": {"type": "string", "minLength": 8},
+    "skill_id": {"type": "string", "pattern": "^(get_|request_|draft_)[a-z0-9_]+$"},
+    "skill_version": {"type": "string", "pattern": "^v[0-9]+$"},
+    "status": {"type": "string", "enum": ["SUCCEEDED", "DENIED", "TIMED_OUT", "FAILED"]},
+    "evidence_event_ids": {"type": "array", "items": {"type": "string"}},
+    "error_code": {"type": "string"}
+  }
+}

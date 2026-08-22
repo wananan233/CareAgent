@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://carehub.local/contracts/CareEventV1",
+  "title": "CareEventV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "aggregate", "sequence", "occurred_at", "received_at", "source", "quality", "privacy", "payload", "checksum", "correlation_id"],
+  "properties": {
+    "schema_version": {"const": "CareEventV1"},
+    "event_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{7,63}$"},
+    "aggregate": {"type": "string", "pattern": "^(user|device|task|alert):[a-zA-Z0-9_-]+$"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "received_at": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "enum": ["SIMULATOR", "DEVICE_GATEWAY", "RULE_ENGINE", "USER_UI", "SERVICE"]},
+    "quality": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"]},
+    "privacy": {"type": "string", "enum": ["INTERNAL", "SENSITIVE"]},
+    "payload": {"type": "object"},
+    "checksum": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "correlation_id": {"type": "string", "minLength": 8},
+    "causation_id": {"type": "string"},
+    "trace_id": {"type": "string"},
+    "agent_run_id": {"type": "string"}
+  }
+}

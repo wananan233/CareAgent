@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://carehub.local/contracts/PlanV1",
+  "title": "PlanV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "agent_run_id", "context_snapshot_id", "goal", "safety_level", "steps", "expires_at", "planner_version"],
+  "properties": {
+    "schema_version": {"const": "PlanV1"},
+    "plan_id": {"type": "string", "minLength": 8},
+    "agent_run_id": {"type": "string", "minLength": 8},
+    "context_snapshot_id": {"type": "string", "minLength": 8},
+    "goal": {"type": "string", "minLength": 1},
+    "safety_level": {"type": "string", "enum": ["S1", "S2"]},
+    "steps": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["skill_id", "skill_version"], "properties": {"skill_id": {"type": "string", "pattern": "^(get_|request_|draft_)[a-z0-9_]+$"}, "skill_version": {"type": "string", "pattern": "^v[0-9]+$"}}}},
+    "approval_required": {"type": "boolean", "default": false},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "planner_version": {"type": "string", "minLength": 1}
+  }
+}

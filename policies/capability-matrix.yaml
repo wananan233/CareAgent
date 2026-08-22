@@ -1,0 +1,18 @@
+{
+  "policy_version": "v1",
+  "default_effect": "DENY",
+  "subjects": {
+    "RULE_ENGINE": ["create_alert", "request_safety_check", "notify_family"],
+    "DETERMINISTIC_PLANNER": ["read_medication", "play_prompt", "request_safety_check"],
+    "CARE_AGENT": ["build_context", "submit_action_intent"],
+    "MODEL_GATEWAY": ["generate_schema_response"],
+    "TERMINAL_UI": ["read_authorized_view", "submit_confirmation"]
+  },
+  "denied_capabilities": ["database_write", "mqtt_publish", "ble_control", "gpio_control", "shell", "arbitrary_http", "mark_medication_taken", "change_dose", "trigger_sos"],
+  "abac_required_attributes": ["subject", "household", "purpose", "classification", "consent", "expiry", "channel"],
+  "rules": [
+    {"capability": "play_prompt", "requires": ["consent", "task_due", "template_id_whitelisted", "idempotency_key"]},
+    {"capability": "notify_family", "requires": ["consent", "recipient_authorized", "template_id_whitelisted", "cooldown_ok"]},
+    {"capability": "create_alert", "allowed_callers": ["RULE_ENGINE"]}
+  ]
+}

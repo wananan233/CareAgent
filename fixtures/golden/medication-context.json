@@ -1,0 +1,12 @@
+{
+  "schema_version": "ContextSnapshotV1",
+  "snapshot_id": "ctx-golden-0001",
+  "subject_id": "user:synthetic-elder-01",
+  "purpose": "MEDICATION_REMINDER",
+  "as_of": "2026-08-13T08:00:01+08:00",
+  "consent": {"scopes": ["medication_reminder"], "expires_at": "2027-08-13T00:00:00+08:00"},
+  "facts": [],
+  "unknowns": [{"field": "medication.ingested", "reason": "NO_USER_CONFIRMATION"}],
+  "source_event_ids": ["evt-med-due-0001"],
+  "hash": "17b77406e53286d8673a5f27d4bea4a33e0e313355c83f111ca30745aaf4b5f6"
+}

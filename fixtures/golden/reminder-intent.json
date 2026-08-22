@@ -1,0 +1,12 @@
+{
+  "schema_version": "ActionIntentV1",
+  "intent_id": "intent-reminder-0001",
+  "actor": "DETERMINISTIC_PLANNER",
+  "subject_id": "user:synthetic-elder-01",
+  "capability": "play_prompt",
+  "reason": "MEDICATION_DUE_AND_CONSENT_VALID",
+  "source_event_ids": ["evt-med-due-0001"],
+  "deadline": "2026-08-13T08:02:00+08:00",
+  "idempotency_key": "idem-reminder-0001",
+  "args_hash": "2597f18476b50b5e22afe67ae38a0280e0bda8fb79a8e8ec174e8742cfc025f1"
+}
