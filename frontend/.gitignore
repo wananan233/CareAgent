@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+.vite/
+*.local
+~$*
+_taskbook.txt
+_taskbook.xml
+.env
+.env.*
+!.env.example

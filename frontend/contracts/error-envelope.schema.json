@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://carehub.local/contracts/error-envelope.schema.json",
+  "title": "ErrorEnvelope",
+  "description": "固定错误信封。日志只允许 correlationId / route / reasonCode / duration。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["error", "version"],
+  "properties": {
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "reasonCode", "message", "correlationId", "retryable"],
+      "properties": {
+        "code": {
+          "enum": ["OFFLINE", "DENIED", "FAILED", "VALIDATION_ERROR", "NOT_IMPLEMENTED"]
+        },
+        "reasonCode": {
+          "enum": [
+            "NETWORK_OFFLINE",
+            "CONSENT_REVOKED",
+            "CONSENT_EXPIRED",
+            "SUBJECT_MISMATCH",
+            "VERSION_CONFLICT",
+            "UPSTREAM_TIMEOUT",
+            "UPSTREAM_FAILED",
+            "SCHEMA_INVALID",
+            "NOT_IMPLEMENTED",
+            "AGENT_FALLBACK"
+          ]
+        },
+        "message": { "type": "string", "minLength": 1 },
+        "correlationId": { "type": "string", "minLength": 1 },
+        "route": { "type": "string" },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "version": { "type": "string", "const": "v1" }
+  }
+}

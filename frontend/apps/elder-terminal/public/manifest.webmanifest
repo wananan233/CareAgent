@@ -1,0 +1,10 @@
+{
+  "name": "CareHub 老人端（模拟数据演示）",
+  "short_name": "CareHub",
+  "description": "CareHub 2.0 老人端大屏 PWA — 纯软件、纯合成数据、无真实硬件",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f5f0",
+  "theme_color": "#0b3d2e",
+  "lang": "zh-CN"
+}
