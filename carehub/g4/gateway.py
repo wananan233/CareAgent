@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol
 
 
 ALLOWED_PURPOSES = frozenset({"TODAY_STATUS", "DAILY_SUMMARY"})
 FORBIDDEN_TERMS = ("诊断", "处方", "剂量", "加药", "减药", "停药", "已吞服", "已服药", "立即拨打", "触发SOS", "调用工具")
+PII_PATTERN = re.compile(r"(?:1[3-9]\d{9}|\b\d{15,18}[0-9Xx]\b|(?:姓名|电话|地址)\s*[:：])")
 TEMPLATES = {
     "TODAY_STATUS": "当前可确认的信息如下，请按页面中的来源和时间查看详情。",
     "DAILY_SUMMARY": "今日摘要暂时无法生成，请以已确认的时间线记录为准。",
@@ -68,6 +70,8 @@ class ModelGateway:
         for fact in facts:
             if set(fact) != {"text", "source_refs"} or not isinstance(fact["text"], str) or not isinstance(fact["source_refs"], list) or not fact["source_refs"]:
                 raise ModelGatewayError("CONTEXT_INVALID")
+            if PII_PATTERN.search(fact["text"]):
+                raise ModelGatewayError("DLP_BLOCKED")
             result.append({"text": fact["text"][:280], "source_refs": list(fact["source_refs"])})
         return result
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 from .events import new_event
@@ -21,26 +22,52 @@ class RuleEngine:
     def decide(self, event: dict[str, Any]) -> list[dict[str, Any]]:
         """返回待追加的派生事实；所有分支均可确定性重放。"""
         event_type = event["payload"]["event_type"]
-        common = {"correlation_id": event["correlation_id"], "causation_id": event["event_id"], "source": "RULE_ENGINE"}
-        aggregate = event["aggregate"]
-        seq = event["sequence"] + 1
+        common = {
+            "tenant_id": event["tenant_id"],
+            "subject_id": event["subject_id"],
+            "household_id": event["household_id"],
+            "correlation_id": event["correlation_id"],
+            "causation_id": event["event_id"],
+            # Derived events must be byte-for-byte stable on replay so the
+            # event-id fingerprint provides true idempotency rather than a
+            # timestamp/trace-dependent false conflict.
+            "occurred_at": event["occurred_at"],
+            "received_at": event["received_at"],
+            "trace_id": event.get("trace_id"),
+            "source": "RULE_ENGINE",
+        }
         if event_type == "SOS_PRESSED":
-            return self._alert(aggregate, seq, "SOS", "S-1", event, common)
+            return self._alert("SOS", "S-1", event, common)
         if event_type in {"SMOKE_DETECTED", "GAS_DETECTED"}:
-            return self._alert(aggregate, seq, "SMOKE_GAS", "S-1", event, common)
+            return self._alert("SMOKE_GAS", "S-1", event, common)
         if event_type == "FALL_DETECTED" and event["quality"] != "LOW":
-            return self._alert(aggregate, seq, "FALL", "S0", event, common)
+            return self._alert("FALL", "S0", event, common)
         if event_type == "INACTIVITY_DETECTED":
-            return [new_event(aggregate=aggregate, sequence=seq, event_type="WELLBEING_CHECK_REQUESTED", payload={"template": FIXED_TEMPLATES["INACTIVITY"], "response_window_seconds": 120}, **common)]
+            return [self._rule_event(event, "wellbeing", "WELLBEING_CHECK_REQUESTED", {"template": FIXED_TEMPLATES["INACTIVITY"], "response_window_seconds": 120}, common)]
         if event_type == "MEDICATION_DUE":
-            return [new_event(aggregate=aggregate, sequence=seq, event_type="PROMPT_REQUESTED", payload={"task_ref": aggregate, "template": FIXED_TEMPLATES["MEDICATION"], "action": "request_play_reminder", "evidence_state": "UNKNOWN"}, **common)]
+            return [self._rule_event(event, "prompt", "PROMPT_REQUESTED", {"task_ref": event["aggregate"], "template": FIXED_TEMPLATES["MEDICATION"], "action": "request_play_reminder", "evidence_state": "UNKNOWN"}, common)]
         if event_type == "DEVICE_OFFLINE":
-            return [new_event(aggregate=aggregate, sequence=seq, event_type="FIXED_RESPONSE_READY", payload={"template": FIXED_TEMPLATES["DEVICE_OFFLINE"], "safety_level": "S0"}, **common)]
+            return [self._rule_event(event, "offline", "FIXED_RESPONSE_READY", {"template": FIXED_TEMPLATES["DEVICE_OFFLINE"], "safety_level": "S0"}, common)]
         return []
 
-    def _alert(self, aggregate: str, sequence: int, kind: str, level: str, event: dict[str, Any], common: dict[str, Any]) -> list[dict[str, Any]]:
+    @staticmethod
+    def _derived_id(event_id: str, discriminator: str) -> str:
+        digest = hashlib.sha256(f"{event_id}:{discriminator}".encode("utf-8")).hexdigest()[:24]
+        return f"evt-rule-{digest}"
+
+    def _rule_event(self, event: dict[str, Any], discriminator: str, event_type: str, payload: dict[str, Any], common: dict[str, Any]) -> dict[str, Any]:
+        return new_event(
+            event_id=self._derived_id(event["event_id"], discriminator),
+            aggregate=f"rule:{self._derived_id(event['event_id'], discriminator).removeprefix('evt-rule-')}",
+            sequence=1,
+            event_type=event_type,
+            payload=payload,
+            **common,
+        )
+
+    def _alert(self, kind: str, level: str, event: dict[str, Any], common: dict[str, Any]) -> list[dict[str, Any]]:
         alert_id = f"alert-{event['event_id']}"
         return [
-            new_event(aggregate=aggregate, sequence=sequence, event_type="ALERT_RAISED", payload={"alert_id": alert_id, "kind": kind, "safety_level": level, "status": "ACTIVE"}, **common),
-            new_event(aggregate=f"alert:{alert_id}", sequence=1, event_type="FIXED_RESPONSE_READY", payload={"alert_id": alert_id, "template": FIXED_TEMPLATES[kind], "safety_level": level}, **common),
+            new_event(event_id=self._derived_id(event["event_id"], "alert"), aggregate=f"alert:{event['event_id']}", sequence=1, event_type="ALERT_RAISED", payload={"alert_id": alert_id, "kind": kind, "safety_level": level, "status": "ACTIVE"}, **common),
+            new_event(event_id=self._derived_id(event["event_id"], "alert-response"), aggregate=f"alert:{event['event_id']}", sequence=2, event_type="FIXED_RESPONSE_READY", payload={"alert_id": alert_id, "template": FIXED_TEMPLATES[kind], "safety_level": level}, **common),
         ]

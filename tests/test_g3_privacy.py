@@ -39,11 +39,12 @@ def test_consent_revoke_is_immediate_and_cross_household_is_denied(g3):
     service, _, clock = g3
     item = activate(service, service.propose_memory(owner="user:alice", household_id="home-a", memory_type="PREFERENCE", value="晨间提醒", source_event_ids=["evt-2"], confidence=.8, sensitivity="SENSITIVE", consent_scope="timeline", expires_at=clock() + timedelta(days=1)))
     consent = service.ledger.grant(owner="user:alice", grantee="user:bob", household_id="home-a", scope="timeline", purpose="memory", expires_at=clock() + timedelta(minutes=1))
+    consent = service.ledger.activate(consent["consent_id"], actor="user:alice", expected_version=1)
     allowed = PrivacyAccessRequest("user:bob", "user:alice", "home-a", "FAMILY", "timeline", "memory", "SENSITIVE", "TERMINAL")
     wrong_home = PrivacyAccessRequest("user:bob", "user:alice", "home-b", "FAMILY", "timeline", "memory", "SENSITIVE", "TERMINAL")
     assert service.active_memories(allowed)[0]["memory_id"] == item["memory_id"]
     assert service.active_memories(wrong_home) == []
-    service.ledger.revoke(consent["consent_id"], actor="user:alice", expected_version=1)
+    service.ledger.revoke(consent["consent_id"], actor="user:alice", expected_version=2)
     assert service.active_memories(allowed) == []
 
 

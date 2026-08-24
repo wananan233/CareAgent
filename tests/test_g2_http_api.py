@@ -7,9 +7,11 @@ import threading
 from datetime import datetime, timedelta, timezone
 from urllib.request import Request, urlopen
 
-from carehub.g2 import ChatHttpApi, ChatService, InMemoryRateLimiter, StaticTokenAuthenticator, build_context_snapshot, serve_local
+from carehub.g2 import ChatHttpApi, ChatService, InMemoryRateLimiter, SignedDemoAuthenticator, StaticTokenAuthenticator, build_context_snapshot, serve_local
 from carehub.core.service import CareCore
 from carehub.simulators.devices import DeviceSimulator
+from carehub.core.event_store import EventStore
+from carehub.g3 import ConsentLedger, ServerSidePDP
 
 
 def _snapshot(subject_id: str) -> dict:
@@ -56,6 +58,32 @@ def test_chat_api_rejects_missing_token_and_subject_mismatch() -> None:
 
     assert (missing_token.status, missing_token.body["code"]) == (401, "UNAUTHORIZED")
     assert (mismatch.status, mismatch.body["code"]) == (403, "SUBJECT_MISMATCH")
+
+
+def test_chat_api_pdp_resolves_household_and_consent_server_side(tmp_path) -> None:
+    store = EventStore(tmp_path / "api-policy.db")
+    store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:bob", role="FAMILY")
+    ledger = ConsentLedger(store)
+    api = ChatHttpApi(chat_service=ChatService(), authenticator=StaticTokenAuthenticator({"bob-token": "user:bob"}, tenant_id="tenant:a"), context_provider=_snapshot, pdp=ServerSidePDP(store, ledger))
+    request = dict(method="POST", path="/v1/users/alice/chat", headers={"Authorization": "Bearer bob-token"}, body=json.dumps({"message": "有什么提醒？"}).encode())
+    assert api.handle(**request).body["code"] == "POLICY_DENIED"
+    consent = ledger.grant(owner="user:alice", grantee="user:bob", household_id="home:a", scope="chat", purpose="chat", tenant_id="tenant:a")
+    consent = ledger.activate(consent["consent_id"], actor="user:alice", expected_version=1)
+    assert api.handle(**request).status == 200
+    ledger.revoke(consent["consent_id"], actor="user:alice", expected_version=2)
+    assert api.handle(**request).body["code"] == "POLICY_DENIED"
+    store.close()
+
+
+def test_signed_demo_token_rejects_tampering_and_expiry() -> None:
+    now = [1_000.0]
+    auth = SignedDemoAuthenticator(b"local-demo-signing-key-32-bytes!!", clock=lambda: now[0])
+    token = auth.issue(actor_id="user:alice", tenant_id="tenant:a", ttl_seconds=2)
+    assert auth.authenticate_context(f"Bearer {token}").actor_id == "user:alice"
+    assert auth.authenticate_context(f"Bearer {token}x") is None
+    now[0] += 2
+    assert auth.authenticate_context(f"Bearer {token}") is None
 
 
 def test_chat_api_rejects_invalid_json_and_extra_fields() -> None:

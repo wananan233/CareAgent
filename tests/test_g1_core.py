@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
 from carehub.core.errors import EventConflictError
 from carehub.core.event_store import EventStore
-from carehub.core.events import new_event
+from carehub.core.events import checksum, new_event
 from carehub.core.projections import Projections
 from carehub.core.rules import FIXED_TEMPLATES, RuleEngine
 from carehub.core.service import CareCore
@@ -38,7 +40,8 @@ def test_event_store_rejects_same_event_id_with_different_content(store: EventSt
         event_type="DEVICE_OFFLINE",
         event_id="evt-fixed",
     )
-    conflicting = {**event, "payload": {"event_type": "SOS_PRESSED"}, "checksum": "different"}
+    conflicting_payload = {"event_type": "SOS_PRESSED"}
+    conflicting = {**event, "payload": conflicting_payload, "checksum": checksum(conflicting_payload)}
     store.append(event)
 
     with pytest.raises(EventConflictError, match="event_id 冲突"):
@@ -48,7 +51,7 @@ def test_event_store_rejects_same_event_id_with_different_content(store: EventSt
         "SELECT error_code, disposition FROM dead_letter"
     ).fetchone()
     assert dict(dead_letter) == {
-        "error_code": "EVENT_ID_CHECKSUM_CONFLICT",
+        "error_code": "EVENT_ID_ENVELOPE_CONFLICT",
         "disposition": "QUARANTINED",
     }
     assert len(list(store.events())) == 1
@@ -63,6 +66,106 @@ def test_event_store_rejects_reused_aggregate_sequence(store: EventStore) -> Non
 
     assert len(list(store.events())) == 1
     assert store.pending_outbox_count() == 1
+
+
+def test_c0_same_business_aggregate_can_exist_in_two_households(store: EventStore) -> None:
+    first = new_event(
+        tenant_id="tenant:demo", household_id="household:home-a", subject_id="user:alice",
+        aggregate="task:morning", sequence=1, event_type="MEDICATION_DUE", event_id="evt-home-a-morning",
+    )
+    second = new_event(
+        tenant_id="tenant:demo", household_id="household:home-b", subject_id="user:bob",
+        aggregate="task:morning", sequence=1, event_type="MEDICATION_DUE", event_id="evt-home-b-morning",
+    )
+    assert store.append(first) is True
+    assert store.append(second) is True
+    assert [event["event_id"] for event in store.events_for_scope(tenant_id="tenant:demo", household_id="household:home-a", subject_id="user:alice")] == ["evt-home-a-morning"]
+    assert [event["event_id"] for event in store.events_for_scope(tenant_id="tenant:demo", household_id="household:home-b", subject_id="user:bob")] == ["evt-home-b-morning"]
+
+
+def test_c0_projection_key_includes_tenant(tmp_path: pytest.TempPathFactory) -> None:
+    core = CareCore(tmp_path / "tenant-projection.db")
+    first = DeviceSimulator(tenant_id="tenant:one", subject_id="user:alex", household_id="household:shared")
+    second = DeviceSimulator(tenant_id="tenant:two", subject_id="user:alex", household_id="household:shared")
+    core.ingest(first.medication_due("morning", 1))
+    core.ingest(second.medication_due("morning", 1))
+    assert core.projections.tasks_for(tenant_id="tenant:one", subject_id="user:alex", household_id="household:shared")["task:morning"]["event_type"] == "MEDICATION_DUE"
+    assert core.projections.tasks_for(tenant_id="tenant:two", subject_id="user:alex", household_id="household:shared")["task:morning"]["event_type"] == "MEDICATION_DUE"
+    assert len(core.projections.tasks) == 2
+    core.close()
+
+
+def test_c0_scope_relationships_are_tenant_bound(store: EventStore) -> None:
+    store.register_scope(tenant_id="tenant:one", household_id="household:home", subject_id="user:alex", principal_id="user:alex", role="SELF", device_id="device:one")
+    assert store.scope_registered(tenant_id="tenant:one", household_id="household:home", subject_id="user:alex")
+    assert not store.scope_registered(tenant_id="tenant:two", household_id="household:home", subject_id="user:alex")
+
+
+def test_c0_scoped_tasks_do_not_cross_households(store: EventStore) -> None:
+    common = {"task_id": "task:morning", "kind": "MEDICATION_REMINDER", "status": "DUE", "safety_level": "S1", "source_event_ids": ["evt-1"], "reschedulable": False, "max_delay_seconds": 0, "version": 1, "updated_at": "2026-08-22T00:00:00+00:00", "tenant_id": "tenant:demo"}
+    store.upsert_care_task({**common, "subject_id": "user:alex", "household_id": "household:home-a"})
+    store.upsert_care_task({**common, "subject_id": "user:alex", "household_id": "household:home-b"})
+    assert [item["task_id"] for item in store.care_tasks("user:alex", tenant_id="tenant:demo", household_id="household:home-a")] == ["task:morning"]
+
+
+def test_c0_legacy_event_log_is_quarantined_on_open(tmp_path: pytest.TempPathFactory) -> None:
+    database = tmp_path / "legacy.db"
+    connection = sqlite3.connect(database)
+    connection.executescript("""
+        CREATE TABLE event_log (
+          global_sequence INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT NOT NULL UNIQUE,
+          subject_id TEXT NOT NULL, household_id TEXT NOT NULL, aggregate TEXT NOT NULL,
+          aggregate_sequence INTEGER NOT NULL, occurred_at TEXT NOT NULL, received_at TEXT NOT NULL,
+          source TEXT NOT NULL, quality TEXT NOT NULL, privacy TEXT NOT NULL, payload_json TEXT NOT NULL,
+          checksum TEXT NOT NULL, correlation_id TEXT NOT NULL, causation_id TEXT, trace_id TEXT,
+          UNIQUE(aggregate, aggregate_sequence)
+        );
+        CREATE TABLE outbox (event_id TEXT NOT NULL, destination TEXT NOT NULL, PRIMARY KEY(event_id, destination));
+    """)
+    connection.close()
+    store = EventStore(database)
+    assert list(store.events()) == []
+    assert store.connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='legacy_unscoped_event_log'").fetchone()
+    store.close()
+
+
+def test_c0_concurrent_same_sequence_has_one_winner_and_no_partial_outbox(store: EventStore) -> None:
+    first = new_event(tenant_id="tenant:demo", household_id="household:home", subject_id="user:alex", aggregate="device:one", sequence=1, event_type="DEVICE_OFFLINE", event_id="evt-race-first")
+    second = new_event(tenant_id="tenant:demo", household_id="household:home", subject_id="user:alex", aggregate="device:one", sequence=1, event_type="DEVICE_OFFLINE", event_id="evt-race-second")
+
+    def append(event: dict[str, object]) -> str:
+        try:
+            return "inserted" if store.append(event) else "duplicate"
+        except ValueError:
+            return "conflict"
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        outcomes = list(workers.map(append, (first, second)))
+    assert sorted(outcomes) == ["conflict", "inserted"]
+    assert len(list(store.events_for_scope(tenant_id="tenant:demo", household_id="household:home", subject_id="user:alex"))) == 1
+    assert store.pending_outbox_count() == 1
+
+
+def test_c0_same_event_id_with_different_scope_is_quarantined(store: EventStore) -> None:
+    first = new_event(
+        tenant_id="tenant:demo", household_id="household:home-a", subject_id="user:alice",
+        aggregate="device:one", sequence=1, event_type="DEVICE_OFFLINE", event_id="evt-scope-conflict",
+    )
+    conflicting = {**first, "household_id": "household:home-b", "subject_id": "user:bob"}
+    store.append(first)
+    with pytest.raises(EventConflictError, match="event_id 冲突"):
+        store.append(conflicting)
+    assert store.connection.execute("SELECT error_code FROM dead_letter").fetchone()["error_code"] == "EVENT_ID_ENVELOPE_CONFLICT"
+
+
+def test_c0_rejects_malformed_typed_payload_before_it_reaches_the_event_log(store: EventStore) -> None:
+    event = new_event(
+        aggregate="alert:malformed", sequence=1, event_type="ALERT_RAISED",
+        payload={"alert_id": "alert-malformed", "kind": "SOS"},
+    )
+    with pytest.raises(ValueError, match="ALERT_RAISED payload 缺少字段"):
+        store.append(event)
+    assert list(store.events()) == []
 
 
 @pytest.mark.parametrize(
@@ -93,8 +196,8 @@ def test_rule_engine_raises_expected_alerts(
         "FIXED_RESPONSE_READY",
     ]
     alert, response = emitted
-    assert alert["aggregate"] == "device:careport-01"
-    assert alert["sequence"] == 8
+    assert alert["aggregate"] == "alert:evt-source"
+    assert alert["sequence"] == 1
     assert alert["payload"] == {
         "event_type": "ALERT_RAISED",
         "alert_id": "alert-evt-source",
@@ -102,8 +205,8 @@ def test_rule_engine_raises_expected_alerts(
         "safety_level": expected_level,
         "status": "ACTIVE",
     }
-    assert response["aggregate"] == "alert:alert-evt-source"
-    assert response["sequence"] == 1
+    assert response["aggregate"] == "alert:evt-source"
+    assert response["sequence"] == 2
     assert response["payload"]["template"] == FIXED_TEMPLATES[expected_kind]
     assert {item["causation_id"] for item in emitted} == {"evt-source"}
     assert {item["correlation_id"] for item in emitted} == {"corr-source"}
@@ -152,7 +255,8 @@ def test_rule_engine_emits_fixed_safe_workflows(
 
     assert len(emitted) == 1
     assert emitted[0]["payload"] == {"event_type": expected_type, **expected_payload}
-    assert emitted[0]["sequence"] == 4
+    assert emitted[0]["sequence"] == 1
+    assert emitted[0]["aggregate"].startswith("rule:")
     assert emitted[0]["causation_id"] == event["event_id"]
 
 
@@ -173,13 +277,15 @@ def test_care_core_is_idempotent_and_replay_preserves_projection(tmp_path: pytes
     assert len(list(restored_core.store.events())) == 2
     assert restored_core.store.pending_outbox_count() == 2
     assert replayed.digest() == digest_after_ingest
-    assert replayed.tasks["task:morning"] == {
+    task = replayed.tasks_for(subject_id="user:synthetic-01", household_id="household:synthetic-home")["task:morning"]
+    assert {key: task[key] for key in ("status", "evidence_state", "event_type", "simulator", "last_prompt_event_id")} == {
         "status": "DUE",
         "evidence_state": "UNKNOWN",
         "event_type": "MEDICATION_DUE",
         "simulator": "Dose",
         "last_prompt_event_id": first_emitted[0]["event_id"],
     }
+    assert task["version"] == 1 and task["quality"] == "HIGH" and task["source_refs"] == [event["event_id"]]
     restored_core.close()
 
 
@@ -211,8 +317,8 @@ def test_projection_tracks_alert_resolution_and_medication_evidence() -> None:
         )
     )
 
-    assert projection.alerts["alert-one"]["status"] == "RESOLVED"
-    assert projection.tasks["task:morning"]["evidence_state"] == "RECORDED"
+    assert projection.alerts_for(subject_id="user:synthetic-01", household_id="household:synthetic-home")["alert-one"]["status"] == "RESOLVED"
+    assert projection.tasks_for(subject_id="user:synthetic-01", household_id="household:synthetic-home")["task:morning"]["evidence_state"] == "RECORDED"
     assert [item["event_type"] for item in projection.timeline] == [
         "ALERT_RAISED",
         "ALERT_RESOLVED",
@@ -229,3 +335,19 @@ def test_event_store_audit_chain_does_not_store_message_body(store: EventStore) 
     assert first != second
     assert [entry["decision"] for entry in entries] == ["ALLOW", "DENY"]
     assert all("我现在有什么提醒" not in str(entry) for entry in entries)
+
+
+def test_batch_rolls_back_source_when_a_derived_event_conflicts(tmp_path: pytest.TempPathFactory) -> None:
+    core = CareCore(tmp_path / "atomic-derived.db")
+    source = new_event(aggregate="device:atomic", sequence=1, event_type="SMOKE_DETECTED", event_id="evt-atomic-source")
+    derived = RuleEngine().decide(source)[0]
+    colliding = new_event(
+        aggregate=derived["aggregate"], sequence=derived["sequence"], event_type="UNRELATED", event_id="evt-derived-collision"
+    )
+    core.store.append(colliding)
+
+    with pytest.raises(ValueError, match="Aggregate sequence"):
+        core.ingest(source)
+
+    assert [event["event_id"] for event in core.store.events()] == ["evt-derived-collision"]
+    core.close()

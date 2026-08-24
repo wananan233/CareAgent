@@ -46,3 +46,23 @@ def test_simulator_events_become_authorized_chat_facts(tmp_path) -> None:
     ]
     assert generator.context == snapshot
     assert all(ref in snapshot["source_event_ids"] for fact in snapshot["facts"] for ref in fact["source_refs"])
+
+
+def test_chat_context_never_mixes_subjects_or_households(tmp_path) -> None:
+    core = CareCore(tmp_path / "tenant-context.db")
+    alice = DeviceSimulator(subject_id="user:alice", household_id="household:home-a")
+    bob = DeviceSimulator(subject_id="user:bob", household_id="household:home-b")
+    core.ingest(alice.medication_due("morning", 1))
+    core.ingest(bob.event("safe-b", 1, "SMOKE_DETECTED"))
+
+    snapshot = core.build_chat_context(
+        subject_id="user:alice",
+        household_id="household:home-a",
+        consent_expires_at=(datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
+    )
+    core.close()
+
+    assert [fact["text"] for fact in snapshot["facts"]] == [
+        "服药任务 task:morning 当前状态：DUE；证据状态：UNKNOWN。"
+    ]
+    assert all("SMOKE_GAS" not in fact["text"] for fact in snapshot["facts"])

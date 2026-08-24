@@ -5,15 +5,19 @@ from __future__ import annotations
 import json
 import re
 import uuid
+import base64
+import hashlib
+import hmac
 from collections import deque
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Mapping
 from threading import Lock
-from time import monotonic
+from time import monotonic, time
 
 from .chat import ChatService
+from carehub.g3 import AuthContext, PolicyRequest, ServerSidePDP
 
 
 CHAT_PATH = re.compile(r"^/v1/users/(?P<user_id>[a-zA-Z0-9_-]+)/chat$")
@@ -40,13 +44,56 @@ class ApiResponse:
 class StaticTokenAuthenticator:
     """测试和本地部署使用的令牌到主体映射；令牌本身不会写入日志。"""
 
-    def __init__(self, token_subjects: Mapping[str, str]) -> None:
+    def __init__(self, token_subjects: Mapping[str, str | AuthContext], *, tenant_id: str = "tenant:synthetic") -> None:
         self._token_subjects = dict(token_subjects)
+        self._tenant_id = tenant_id
 
     def authenticate(self, authorization: str | None) -> str | None:
+        context = self.authenticate_context(authorization)
+        return context.actor_id if context else None
+
+    def authenticate_context(self, authorization: str | None) -> AuthContext | None:
         if not authorization or not authorization.startswith("Bearer "):
             return None
-        return self._token_subjects.get(authorization.removeprefix("Bearer "))
+        token = authorization.removeprefix("Bearer ")
+        identity = self._token_subjects.get(token)
+        if isinstance(identity, AuthContext):
+            return AuthContext(identity.actor_id, identity.tenant_id, token)
+        return AuthContext(identity, self._tenant_id, token) if identity else None
+
+
+class SignedDemoAuthenticator:
+    """本地演示用 HMAC Bearer 令牌；密钥由部署注入，绝不写入仓库或审计。"""
+    def __init__(self, signing_key: bytes, *, clock: Callable[[], float] = time) -> None:
+        if len(signing_key) < 16:
+            raise ValueError("演示签名密钥至少 16 字节")
+        self._key, self._clock = signing_key, clock
+
+    def issue(self, *, actor_id: str, tenant_id: str, ttl_seconds: int = 300) -> str:
+        if ttl_seconds < 1 or not actor_id or not tenant_id:
+            raise ValueError("令牌声明无效")
+        payload = json.dumps({"actor_id": actor_id, "tenant_id": tenant_id, "exp": int(self._clock() + ttl_seconds)}, separators=(",", ":")).encode()
+        body = base64.urlsafe_b64encode(payload).decode().rstrip("=")
+        signature = hmac.new(self._key, body.encode(), hashlib.sha256).hexdigest()
+        return f"{body}.{signature}"
+
+    def authenticate_context(self, authorization: str | None) -> AuthContext | None:
+        if not authorization or not authorization.startswith("Bearer "):
+            return None
+        token = authorization.removeprefix("Bearer ")
+        try:
+            body, signature = token.split(".", 1)
+            expected = hmac.new(self._key, body.encode(), hashlib.sha256).hexdigest()
+            payload = json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
+            if not hmac.compare_digest(signature, expected) or int(payload["exp"]) <= self._clock():
+                return None
+            return AuthContext(str(payload["actor_id"]), str(payload["tenant_id"]), "signed-demo")
+        except (ValueError, KeyError, UnicodeDecodeError, json.JSONDecodeError):
+            return None
+
+    def authenticate(self, authorization: str | None) -> str | None:
+        context = self.authenticate_context(authorization)
+        return context.actor_id if context else None
 
 
 class InMemoryRateLimiter:
@@ -84,24 +131,26 @@ class ChatHttpApi:
         context_provider: Callable[[str], Mapping[str, Any]],
         rate_limiter: InMemoryRateLimiter | None = None,
         audit_recorder: Callable[[str, str, str], None] | None = None,
+        pdp: ServerSidePDP | None = None,
     ) -> None:
         self._chat_service = chat_service
         self._authenticator = authenticator
         self._context_provider = context_provider
         self._rate_limiter = rate_limiter or InMemoryRateLimiter()
         self._audit_recorder = audit_recorder
+        self._pdp = pdp
 
     def handle(self, *, method: str, path: str, headers: Mapping[str, str], body: bytes) -> ApiResponse:
         match = CHAT_PATH.fullmatch(path)
         if method != "POST" or not match:
             return self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "接口不存在", retryable=False)
-        subject_id = self._authenticator.authenticate(headers.get("Authorization"))
-        if not subject_id:
+        context = self._authenticator.authenticate_context(headers.get("Authorization"))
+        if not context:
             return self._error(HTTPStatus.UNAUTHORIZED, "UNAUTHORIZED", "缺少或无效的访问令牌", retryable=False)
         requested_subject = f"user:{match.group('user_id')}"
-        if subject_id != requested_subject:
+        if not self._pdp and context.actor_id != requested_subject:
             return self._error(HTTPStatus.FORBIDDEN, "SUBJECT_MISMATCH", "令牌无权访问该用户", retryable=False)
-        if not self._rate_limiter.allow(subject_id):
+        if not self._rate_limiter.allow(context.actor_id):
             return self._error(HTTPStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "请求过于频繁，请稍后重试", retryable=True)
         try:
             request = json.loads(body.decode("utf-8"))
@@ -109,8 +158,23 @@ class ChatHttpApi:
             return self._error(HTTPStatus.BAD_REQUEST, "INVALID_JSON", "请求体必须是 JSON", retryable=False)
         if not isinstance(request, dict) or set(request) - {"message", "channel", "history"}:
             return self._error(HTTPStatus.BAD_REQUEST, "INVALID_REQUEST", "仅支持 message、可选 channel 和 history 字段", retryable=False)
+        if self._pdp:
+            scope = self._pdp.store.connection.execute(
+                "SELECT household_id FROM subject WHERE tenant_id=? AND subject_id=?",
+                (context.tenant_id, requested_subject),
+            ).fetchone()
+            if not scope:
+                self._audit("DENY", "UNKNOWN_SCOPE", context.actor_id)
+                return self._error(HTTPStatus.FORBIDDEN, "POLICY_DENIED", "无权访问该资源范围", retryable=False)
+            decision = self._pdp.authorize(context, PolicyRequest(
+                scope["household_id"], requested_subject, "read_authorized_view", "chat", "SENSITIVE",
+                request.get("channel", "TERMINAL"), "chat",
+            ))
+            if not decision.allowed:
+                self._audit("DENY", decision.reason, context.actor_id)
+                return self._error(HTTPStatus.FORBIDDEN, "POLICY_DENIED", "授权策略拒绝访问", retryable=False)
         try:
-            snapshot = self._context_provider(subject_id)
+            snapshot = self._context_provider(requested_subject)
             response = self._chat_service.respond(
                 message=request.get("message"),
                 context_snapshot=snapshot,
@@ -120,11 +184,11 @@ class ChatHttpApi:
         except ValueError as error:
             return self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", str(error), retryable=False)
         except RuntimeError:
-            self._audit("DENY", "MODEL_UNAVAILABLE", subject_id)
+            self._audit("DENY", "MODEL_UNAVAILABLE", context.actor_id)
             return self._error(HTTPStatus.BAD_GATEWAY, "MODEL_UNAVAILABLE", "模型服务暂不可用", retryable=True)
         except Exception:
             return self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "本地服务处理失败", retryable=False)
-        self._audit("ALLOW", "CHAT_RESPONSE", subject_id)
+        self._audit("ALLOW", "CHAT_RESPONSE", context.actor_id)
         return ApiResponse(status=HTTPStatus.OK, body=response)
 
     def _audit(self, decision: str, reason: str, subject_id: str) -> None:

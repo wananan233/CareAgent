@@ -14,11 +14,16 @@ def build_chat_context_from_g1(
     *,
     projections: Projections,
     events: Iterable[dict[str, Any]],
+    tenant_id: str,
     subject_id: str,
+    household_id: str,
     consent_expires_at: str,
 ) -> dict[str, Any]:
     """仅从活动告警和服药任务生成带事件出处的事实，不传递原始 payload。"""
-    event_list = list(events)
+    event_list = [
+        event for event in events
+        if event["tenant_id"] == tenant_id and event["subject_id"] == subject_id and event["household_id"] == household_id
+    ]
     alert_sources = {
         event["payload"].get("alert_id"): event["event_id"]
         for event in event_list
@@ -32,7 +37,7 @@ def build_chat_context_from_g1(
     facts: list[dict[str, Any]] = []
     unknowns: list[dict[str, str]] = []
 
-    for alert_id, alert in sorted(projections.alerts.items()):
+    for alert_id, alert in sorted(projections.alerts_for(tenant_id=tenant_id, subject_id=subject_id, household_id=household_id).items()):
         if alert.get("status") != "ACTIVE" or alert_id not in alert_sources:
             continue
         facts.append(
@@ -42,7 +47,7 @@ def build_chat_context_from_g1(
             }
         )
 
-    for task_ref, task in sorted(projections.tasks.items()):
+    for task_ref, task in sorted(projections.tasks_for(tenant_id=tenant_id, subject_id=subject_id, household_id=household_id).items()):
         source_event_id = task_sources.get(task_ref)
         if not source_event_id:
             continue
