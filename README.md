@@ -4,6 +4,24 @@
 
 CareHub 2.0 的本地优先照护建议编排器。它不是设备控制器、医疗诊断系统或自治急救决策器。
 
+## PWA 工作区
+
+家庭端与老人端现已统一到根 pnpm 工作区，并共享家庭端 Core DTO：
+
+```text
+apps/family-pwa/         家庭端 PWA
+apps/elder-terminal/     老人端 PWA
+apps/shared-contracts/   跨端契约；src/family.ts 为 Core 规范来源
+```
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @carehub/family-pwa dev
+pnpm --filter @carehub/elder-terminal dev
+```
+
+完整老人端验收结果见 [docs/elder-terminal/acceptance-report.md](docs/elder-terminal/acceptance-report.md)。
+
 ## 当前 Gate：G5（可观测性、重放与故障注入）
 
 G1 已实现 SQLite WAL 事件库、Transactional Outbox、确定性规则、状态投影与合成设备模拟器。G2 在其上实现不依赖模型的 CareAgent MVP。G3 新增结构化与工作记忆、同意账本、RBAC+ABAC、数据删除与敏感日志扫描。G4 增加默认离线 FakeProvider、目的最小化、固定 Schema、安全扫描与模板降级，仅开放今日状态和日报。G5 增加最小化 Trace/Metrics、确定性重放报告与故障注入证据。G4 另提供可选的 DeepSeek Provider，密钥只从独立进程环境变量读取。

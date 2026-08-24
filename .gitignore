@@ -18,3 +18,11 @@ var/*.db
 .idea/
 *.swp
 .DS_Store
+
+# Node / pnpm 构建与测试产物
+node_modules/
+.pnpm-store/
+dist/
+*.tsbuildinfo
+test-results/
+playwright-report/
