@@ -46,8 +46,8 @@ describe('MockCoreAdapter 各结果状态', () => {
       DEMO_SUBJECT_ID,
       makeCareRequest({
         kind: 'ACKNOWLEDGE_TASK',
-        targetId: firstTask!.taskId,
-        expectedVersion: firstTask!.version,
+        targetId: firstTask!.task_id,
+        expected_version: firstTask!.version,
       }),
     );
     expect(receipt.ok).toBe(true);
@@ -107,7 +107,7 @@ describe('getTimeline 时间线', () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.data.every(isCareEventV1)).toBe(true);
-      expect(r.data.some((e) => e.eventType === 'MEDICATION_DUE')).toBe(true);
+      expect(r.data.some((e) => e.event_type === 'MEDICATION_DUE')).toBe(true);
       expect(r.data.some((e) => e.quality.status === 'LOW')).toBe(true);
       expect(r.data.some((e) => e.quality.status === 'CONFLICT')).toBe(true);
     }
@@ -124,8 +124,8 @@ describe('幂等请求与版本控制', () => {
 
     const req = makeCareRequest({
       kind: 'ACKNOWLEDGE_TASK',
-      targetId: task!.taskId,
-      expectedVersion: task!.version,
+      targetId: task!.task_id,
+      expected_version: task!.version,
     });
 
     const r1 = await api.submitRequest(DEMO_SUBJECT_ID, req);
@@ -139,11 +139,11 @@ describe('幂等请求与版本控制', () => {
     }
 
     const after = await api.getTasks(DEMO_SUBJECT_ID);
-    const updated = after.ok ? after.data.find((t) => t.taskId === task!.taskId) : undefined;
+    const updated = after.ok ? after.data.find((t) => t.task_id === task!.task_id) : undefined;
     expect(updated?.version).toBe(task!.version + 1);
     expect(updated?.status).toBe('ACKNOWLEDGED');
     // 红线：确认只表达“已看到提醒”，证据状态保持 UNKNOWN，绝不推断“已吞服”。
-    expect(updated?.evidenceState).toBe('UNKNOWN');
+    expect(updated?.evidence_state).toBe('UNKNOWN');
   });
 
   it('过期版本：expected_version 不一致返回 VERSION_CONFLICT', async () => {
@@ -154,8 +154,8 @@ describe('幂等请求与版本控制', () => {
 
     const req = makeCareRequest({
       kind: 'ACKNOWLEDGE_TASK',
-      targetId: task!.taskId,
-      expectedVersion: task!.version + 999,
+      targetId: task!.task_id,
+      expected_version: task!.version + 999,
     });
     const r = await api.submitRequest(DEMO_SUBJECT_ID, req);
     expect(r.ok).toBe(true);

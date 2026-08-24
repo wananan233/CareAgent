@@ -14,13 +14,13 @@ const route = useRoute();
 const care = useCareStore();
 const feedback = ref<string | null>(null);
 
-const alertId = computed(() => route.params.id as string);
-const alert = computed(() => care.alerts.find((a) => a.alertId === alertId.value));
+const alert_id = computed(() => route.params.id as string);
+const alert = computed(() => care.alerts.find((a) => a.alert_id === alert_id.value));
 const errorState = computed(() => (care.loadError ? loadStateFor(care.loadError) : null));
 
 const timeLabel = computed(() =>
   alert.value
-    ? new Date(alert.value.occurredAt).toLocaleString('zh-CN', {
+    ? new Date(alert.value.occurred_at).toLocaleString('zh-CN', {
         year: 'numeric',
         month: 'numeric',
         day: 'numeric',
@@ -35,14 +35,14 @@ onMounted(() => {
     care.refresh();
   }
   // 记录“查看告警”（服务端允许的只读请求）。
-  if (alertId.value) {
-    care.viewAlert(alertId.value);
+  if (alert_id.value) {
+    care.viewAlert(alert_id.value);
   }
 });
 
 async function acknowledge() {
   feedback.value = null;
-  const result = await care.acknowledgeAlert(alertId.value);
+  const result = await care.acknowledgeAlert(alert_id.value);
   if (result.ok) {
     feedback.value =
       result.data.status === 'VERSION_CONFLICT'
@@ -79,7 +79,7 @@ async function acknowledge() {
         </div>
         <div class="detail__row">
           <dt class="detail__term">安全等级</dt>
-          <dd class="detail__desc">{{ alert.safetyLevel }}</dd>
+          <dd class="detail__desc">{{ alert.safety_level }}</dd>
         </div>
         <div class="detail__row">
           <dt class="detail__term">状态</dt>

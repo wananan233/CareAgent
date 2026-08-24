@@ -23,14 +23,14 @@ export function fixtureMedicationTask(): CareTaskV1 {
   return makeCareTask({
     kind: 'MEDICATION',
     status: 'DUE',
-    evidenceState: 'UNKNOWN',
+    evidence_state: 'UNKNOWN',
   });
 }
 
 export function fixtureTasks(): CareTaskV1[] {
   return [
     fixtureMedicationTask(),
-    makeCareTask({ kind: 'ACTIVITY_REVIEW', status: 'UNKNOWN', evidenceState: 'UNKNOWN' }),
+    makeCareTask({ kind: 'ACTIVITY_REVIEW', status: 'UNKNOWN', evidence_state: 'UNKNOWN' }),
   ];
 }
 
@@ -44,11 +44,11 @@ export function fixtureDashboard(): DashboardViewV1 {
 }
 
 export function fixtureSmokeGasAlert(): AlertViewV1 {
-  return makeAlert({ kind: 'SMOKE_GAS', safetyLevel: 'S0', status: 'ACTIVE' });
+  return makeAlert({ kind: 'SMOKE_GAS', safety_level: 'S0', status: 'ACTIVE' });
 }
 
 export function fixtureSosAlert(): AlertViewV1 {
-  return makeAlert({ kind: 'SOS', safetyLevel: 'S-1', status: 'ACTIVE' });
+  return makeAlert({ kind: 'SOS', safety_level: 'S-1', status: 'ACTIVE' });
 }
 
 /** 安全告警：S-1（SOS）与 S0（烟雾/燃气）均为不可忽略事件。 */
@@ -62,7 +62,7 @@ export function fixtureAgentResponse(): AgentResponseV1 {
     facts: [
       {
         statement: '上午的服药提醒已由系统生成。',
-        sourceRefs: [makeSourceRef({ label: 'CareDose 合成事件' })],
+        source_refs: [makeSourceRef({ label: 'CareDose 合成事件' })],
         confidence: 'VALID',
       },
     ],
@@ -80,36 +80,36 @@ export function fixtureAgentFallback(): AgentResponseV1 {
 }
 
 /**
- * 无来源事实：类型层面是合法 AgentResponseV1，但事实的 sourceRefs 为空，
- * 运行时 guard（isAgentFact 要求 sourceRefs.length > 0）会拒绝它。
+ * 无来源事实：类型层面是合法 AgentResponseV1，但事实的 source_refs 为空，
+ * 运行时 guard（isAgentFact 要求 source_refs.length > 0）会拒绝它。
  * 客户端必须显示模板失败态，绝不可渲染其中的原始模型文本。
  */
 export function fixtureAgentNoSource(): AgentResponseV1 {
   return {
     message: '原始模型文本：已按医嘱服药（未经验证，不应被渲染）。',
-    facts: [{ statement: '已按医嘱服药。', sourceRefs: [], confidence: 'VALID' }],
-    sourceRefs: [],
+    facts: [{ statement: '已按医嘱服药。', source_refs: [], confidence: 'VALID' }],
+    source_refs: [],
     fallback: false,
   };
 }
 
 export function fixtureLowQualityEvent(): CareEventV1 {
   return makeCareEvent({
-    eventType: 'LOW_QUALITY_ACTIVITY',
+    event_type: 'LOW_QUALITY_ACTIVITY',
     quality: { status: 'LOW', reason: '活动数据不足，暂未确认' },
   });
 }
 
 export function fixtureMedicationDueEvent(): CareEventV1 {
   return makeCareEvent({
-    eventType: 'MEDICATION_DUE',
+    event_type: 'MEDICATION_DUE',
     quality: { status: 'VALID' },
   });
 }
 
 export function fixtureConflictEvent(): CareEventV1 {
   return makeCareEvent({
-    eventType: 'MEDICATION_DUE',
+    event_type: 'MEDICATION_DUE',
     quality: { status: 'CONFLICT', reason: '多来源时间不一致' },
   });
 }

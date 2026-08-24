@@ -18,13 +18,13 @@ describe('care store（数据视图模型，非事实源）', () => {
     await store.refresh();
 
     const task = store.tasks[0];
-    const result = await store.acknowledgeTask(task.taskId);
+    const result = await store.acknowledgeTask(task.task_id);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.status).toBe('RECEIVED');
 
-    const updated = store.tasks.find((t) => t.taskId === task.taskId);
+    const updated = store.tasks.find((t) => t.task_id === task.task_id);
     expect(updated?.status).toBe('ACKNOWLEDGED');
-    expect(updated?.evidenceState).toBe('UNKNOWN');
+    expect(updated?.evidence_state).toBe('UNKNOWN');
     expect(updated?.version).toBe(task.version + 1);
   });
 

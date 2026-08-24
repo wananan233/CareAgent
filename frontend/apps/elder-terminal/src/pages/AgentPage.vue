@@ -84,7 +84,7 @@ async function ask() {
           <p class="agent__statement">{{ f.statement }}</p>
           <div class="agent__fact-meta">
             <QualityBadge :quality="f.confidence" />
-            <SourceDrawer :sources="f.sourceRefs" />
+            <SourceDrawer :sources="f.source_refs" />
           </div>
         </li>
       </ul>

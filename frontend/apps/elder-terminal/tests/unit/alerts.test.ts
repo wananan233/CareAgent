@@ -73,8 +73,8 @@ describe('adapter 告警请求（VIEW_ALERT / ACKNOWLEDGE_ALERT）', () => {
       DEMO_SUBJECT_ID,
       makeCareRequest({
         kind: 'VIEW_ALERT',
-        targetId: alert!.alertId,
-        expectedVersion: alert!.version,
+        targetId: alert!.alert_id,
+        expected_version: alert!.version,
       }),
     );
     expect(r.ok).toBe(true);
@@ -92,15 +92,15 @@ describe('adapter 告警请求（VIEW_ALERT / ACKNOWLEDGE_ALERT）', () => {
       DEMO_SUBJECT_ID,
       makeCareRequest({
         kind: 'ACKNOWLEDGE_ALERT',
-        targetId: alert!.alertId,
-        expectedVersion: alert!.version,
+        targetId: alert!.alert_id,
+        expected_version: alert!.version,
       }),
     );
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.data.status).toBe('RECEIVED');
 
     const after = await api.getAlerts(DEMO_SUBJECT_ID);
-    const updated = after.ok ? after.data.find((a) => a.alertId === alert!.alertId) : undefined;
+    const updated = after.ok ? after.data.find((a) => a.alert_id === alert!.alert_id) : undefined;
     expect(updated?.status).toBe('ACKNOWLEDGED');
     expect(updated?.version).toBe(alert!.version + 1);
   });
@@ -114,8 +114,8 @@ describe('adapter 告警请求（VIEW_ALERT / ACKNOWLEDGE_ALERT）', () => {
       DEMO_SUBJECT_ID,
       makeCareRequest({
         kind: 'ACKNOWLEDGE_ALERT',
-        targetId: alert!.alertId,
-        expectedVersion: alert!.version + 999,
+        targetId: alert!.alert_id,
+        expected_version: alert!.version + 999,
       }),
     );
     expect(r.ok).toBe(true);

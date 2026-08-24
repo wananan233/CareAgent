@@ -16,13 +16,13 @@ const route = useRoute();
 const care = useCareStore();
 const feedback = ref<string | null>(null);
 
-const taskId = computed(() => route.params.id as string);
-const task = computed(() => care.tasks.find((t) => t.taskId === taskId.value));
+const task_id = computed(() => route.params.id as string);
+const task = computed(() => care.tasks.find((t) => t.task_id === task_id.value));
 const errorState = computed(() => (care.loadError ? loadStateFor(care.loadError) : null));
 
 const timeLabel = computed(() =>
   task.value
-    ? new Date(task.value.scheduledAt).toLocaleString('zh-CN', {
+    ? new Date(task.value.scheduled_at).toLocaleString('zh-CN', {
         month: 'numeric',
         day: 'numeric',
         hour: '2-digit',
@@ -41,7 +41,7 @@ onMounted(() => {
 
 async function acknowledge() {
   feedback.value = null;
-  const result = await care.acknowledgeTask(taskId.value);
+  const result = await care.acknowledgeTask(task_id.value);
   if (result.ok) {
     feedback.value =
       result.data.status === 'VERSION_CONFLICT'
@@ -86,7 +86,7 @@ async function acknowledge() {
         </div>
         <div class="detail__row">
           <dt class="detail__term">证据状态</dt>
-          <dd class="detail__desc">{{ EVIDENCE_LABEL[task.evidenceState] }}</dd>
+          <dd class="detail__desc">{{ EVIDENCE_LABEL[task.evidence_state] }}</dd>
         </div>
         <div class="detail__row">
           <dt class="detail__term">来源</dt>

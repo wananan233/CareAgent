@@ -13,13 +13,13 @@ async function setup() {
   const care = useCareStore();
   await care.refresh();
 
-  const taskId = care.tasks[0].taskId;
+  const task_id = care.tasks[0].task_id;
   const router = createRouter({ history: createMemoryHistory(), routes });
-  await router.push(`/task/${taskId}`);
+  await router.push(`/task/${task_id}`);
   await router.isReady();
 
   const wrapper = mount(TaskDetailPage, { global: { plugins: [pinia, router] } });
-  return { care, wrapper, taskId };
+  return { care, wrapper, task_id };
 }
 
 describe('任务详情页', () => {
@@ -32,13 +32,13 @@ describe('任务详情页', () => {
   });
 
   it('点击确认后状态变为“已看到提醒”、证据仍“暂未确认”', async () => {
-    const { care, wrapper, taskId } = await setup();
+    const { care, wrapper, task_id } = await setup();
     await wrapper.find('button.detail__action').trigger('click');
     await flushPromises();
 
-    const task = care.tasks.find((t) => t.taskId === taskId);
+    const task = care.tasks.find((t) => t.task_id === task_id);
     expect(task?.status).toBe('ACKNOWLEDGED');
-    expect(task?.evidenceState).toBe('UNKNOWN');
+    expect(task?.evidence_state).toBe('UNKNOWN');
     expect(wrapper.text()).toContain('确认请求已接收');
   });
 });

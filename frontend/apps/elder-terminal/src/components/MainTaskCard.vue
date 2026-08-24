@@ -11,7 +11,7 @@ const props = defineProps<{ task: CareTaskV1 }>();
 
 const kindLabel = computed(() => TASK_KIND_LABEL[props.task.kind]);
 const timeLabel = computed(() =>
-  new Date(props.task.scheduledAt).toLocaleTimeString('zh-CN', {
+  new Date(props.task.scheduled_at).toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit',
   }),
@@ -29,8 +29,8 @@ const timeLabel = computed(() =>
       {{ timeLabel }}
     </p>
     <p class="main-task__status">状态：{{ TASK_STATUS_LABEL[task.status] }}</p>
-    <p class="main-task__evidence">证据：{{ EVIDENCE_LABEL[task.evidenceState] }}</p>
-    <RouterLink :to="`/task/${task.taskId}`" class="main-task__action">
+    <p class="main-task__evidence">证据：{{ EVIDENCE_LABEL[task.evidence_state] }}</p>
+    <RouterLink :to="`/task/${task.task_id}`" class="main-task__action">
       查看任务详情
     </RouterLink>
   </section>

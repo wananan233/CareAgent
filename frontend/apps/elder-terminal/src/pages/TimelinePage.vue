@@ -11,7 +11,7 @@ const care = useCareStore();
 const errorState = computed(() => (care.loadError ? loadStateFor(care.loadError) : null));
 
 function timeLabel(e: CareEventV1): string {
-  return new Date(e.occurredAt).toLocaleTimeString('zh-CN', {
+  return new Date(e.occurred_at).toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -44,13 +44,13 @@ onMounted(() => {
       description="今天还没有模拟事件。"
     />
     <ol v-else class="timeline">
-      <li v-for="e in care.timeline" :key="e.eventId" class="timeline__item">
+      <li v-for="e in care.timeline" :key="e.event_id" class="timeline__item">
         <div class="timeline__head">
           <span class="timeline__time">{{ timeLabel(e) }}</span>
-          <span class="timeline__label">{{ CARE_EVENT_LABEL[e.eventType] }}</span>
+          <span class="timeline__label">{{ CARE_EVENT_LABEL[e.event_type] }}</span>
           <QualityBadge :quality="e.quality.status" :reason="e.quality.reason" />
         </div>
-        <p class="timeline__source">来源：{{ e.source.type }}（{{ e.source.simulatorId }}）</p>
+        <p class="timeline__source">来源：{{ e.source.type }}（{{ e.source.simulator_id }}）</p>
       </li>
     </ol>
   </PageShell>

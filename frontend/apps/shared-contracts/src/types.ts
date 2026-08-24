@@ -19,7 +19,7 @@ export type SourceType = 'SIMULATOR';
 
 export interface EventSource {
   type: SourceType;
-  simulatorId: string;
+  simulator_id: string;
 }
 
 export type QualityStatus = 'VALID' | 'LOW' | 'CONFLICT' | 'UNKNOWN';
@@ -30,10 +30,10 @@ export interface Quality {
 }
 
 export interface SourceRef {
-  refId: string;
+  ref_id: string;
   kind: string;
   label: string;
-  occurredAt: string;
+  occurred_at: string;
 }
 
 export type CareEventType =
@@ -44,12 +44,12 @@ export type CareEventType =
   | 'LOW_QUALITY_ACTIVITY';
 
 export interface CareEventV1 {
-  eventId: string;
-  eventType: CareEventType;
-  occurredAt: string;
+  event_id: string;
+  event_type: CareEventType;
+  occurred_at: string;
   source: EventSource;
   quality: Quality;
-  sourceRefs: SourceRef[];
+  source_refs: SourceRef[];
 }
 
 export type EvidenceState = 'UNKNOWN' | 'SEEN' | 'PENDING';
@@ -58,11 +58,11 @@ export type TaskKind = 'MEDICATION' | 'SAFETY_CHECK' | 'ACTIVITY_REVIEW';
 export type TaskStatus = 'DUE' | 'REMINDING' | 'ACKNOWLEDGED' | 'UNKNOWN';
 
 export interface CareTaskV1 {
-  taskId: string;
+  task_id: string;
   kind: TaskKind;
   status: TaskStatus;
-  scheduledAt: string;
-  evidenceState: EvidenceState;
+  scheduled_at: string;
+  evidence_state: EvidenceState;
   version: number;
 }
 
@@ -71,24 +71,24 @@ export type AlertKind = 'SMOKE_GAS' | 'SOS' | 'FALL' | 'GENERAL';
 export type AlertStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED';
 
 export interface AlertViewV1 {
-  alertId: string;
+  alert_id: string;
   kind: AlertKind;
-  safetyLevel: SafetyLevel;
+  safety_level: SafetyLevel;
   status: AlertStatus;
-  occurredAt: string;
+  occurred_at: string;
   version: number;
 }
 
 export interface AgentFact {
   statement: string;
-  sourceRefs: SourceRef[];
+  source_refs: SourceRef[];
   confidence: QualityStatus;
 }
 
 export interface AgentResponseV1 {
   message: string;
   facts: AgentFact[];
-  sourceRefs: SourceRef[];
+  source_refs: SourceRef[];
   fallback: boolean;
   reasonCode?: string;
 }
@@ -99,7 +99,7 @@ export type ConsentStatus = 'GRANTED' | 'REVOKED' | 'EXPIRED' | 'PENDING';
 export interface ConsentViewV1 {
   scope: ConsentScope;
   status: ConsentStatus;
-  expiresAt: string;
+  expires_at: string;
   version: number;
 }
 
@@ -117,30 +117,30 @@ export interface UnknownItem {
 export type Freshness = 'FRESH' | 'STALE';
 
 export interface ContextSnapshotV1 {
-  snapshotId: string;
+  snapshot_id: string;
   purpose: string;
-  asOf: string;
+  as_of: string;
   facts: Fact[];
   unknowns: UnknownItem[];
   freshness: Freshness;
 }
 
 export interface DashboardViewV1 {
-  serverTime: string;
-  snapshotId: string;
+  server_time: string;
+  snapshot_id: string;
   welcome: string;
   primaryTask: CareTaskV1 | null;
   nextAction: string;
   safetyStatus: AlertStatus | 'NONE';
-  sourceRefs: SourceRef[];
+  source_refs: SourceRef[];
 }
 
 export type RequestKind = 'ACKNOWLEDGE_TASK' | 'VIEW_ALERT' | 'ACKNOWLEDGE_ALERT';
 
 export interface CareRequestV1 {
   commandId: string;
-  idempotencyKey: string;
-  expectedVersion: number;
+  idempotency_key: string;
+  expected_version: number;
   kind: RequestKind;
   targetId: string;
 }

@@ -11,9 +11,9 @@ export function useNetworkStatus() {
   const care = useCareStore();
 
   function handleOnline() {
-    const wasOffline = app.offline;
+    const was_offline = app.offline;
     app.setOffline(false);
-    if (wasOffline) {
+    if (was_offline) {
       void care.recover();
     }
   }

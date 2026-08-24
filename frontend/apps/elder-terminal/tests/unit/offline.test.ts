@@ -97,15 +97,15 @@ describe('离线写门控', () => {
     const task = care.tasks[0];
     app.setOffline(true);
 
-    const result = await care.acknowledgeTask(task.taskId);
+    const result = await care.acknowledgeTask(task.task_id);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.error.reasonCode).toBe('NETWORK_OFFLINE');
     expect(care.pendingResubmit?.kind).toBe('ACKNOWLEDGE_TASK');
-    expect(care.pendingResubmit?.targetId).toBe(task.taskId);
+    expect(care.pendingResubmit?.targetId).toBe(task.task_id);
     expect(care.pendingResubmit?.label).toBe(PENDING_RESUBMIT_LABEL);
     expect(care.blockedAction).toBeNull();
 
-    const after = care.tasks.find((t) => t.taskId === task.taskId);
+    const after = care.tasks.find((t) => t.task_id === task.task_id);
     expect(after?.status).toBe('DUE');
     expect(after?.version).toBe(task.version);
   });
@@ -116,13 +116,13 @@ describe('离线写门控', () => {
     const alert = care.alerts[0];
     app.setOffline(true);
 
-    const result = await care.acknowledgeAlert(alert.alertId);
+    const result = await care.acknowledgeAlert(alert.alert_id);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.error.reasonCode).toBe('NETWORK_OFFLINE');
     expect(care.blockedAction).toBe(OFFLINE_BLOCKED_LABEL);
     expect(care.pendingResubmit).toBeNull();
 
-    const after = care.alerts.find((a) => a.alertId === alert.alertId);
+    const after = care.alerts.find((a) => a.alert_id === alert.alert_id);
     expect(after?.status).toBe('ACTIVE');
     expect(after?.version).toBe(alert.version);
   });
@@ -133,11 +133,11 @@ describe('离线写门控', () => {
     const alert = care.alerts[0];
     app.setOffline(true);
 
-    await care.viewAlert(alert.alertId);
+    await care.viewAlert(alert.alert_id);
     expect(care.pendingResubmit?.kind).toBe('VIEW_ALERT');
     expect(care.blockedAction).toBeNull();
 
-    const after = care.alerts.find((a) => a.alertId === alert.alertId);
+    const after = care.alerts.find((a) => a.alert_id === alert.alert_id);
     expect(after?.status).toBe('ACTIVE');
   });
 
@@ -146,7 +146,7 @@ describe('离线写门控', () => {
     await care.refresh();
     const task = care.tasks[0];
     app.setOffline(true);
-    await care.acknowledgeTask(task.taskId);
+    await care.acknowledgeTask(task.task_id);
     expect(care.pendingResubmit).not.toBeNull();
 
     app.setOffline(false);
@@ -154,7 +154,7 @@ describe('离线写门控', () => {
     expect(care.loadError).toBeNull();
     expect(care.pendingResubmit).not.toBeNull();
 
-    const after = care.tasks.find((t) => t.taskId === task.taskId);
+    const after = care.tasks.find((t) => t.task_id === task.task_id);
     expect(after?.status).toBe('DUE');
   });
 });

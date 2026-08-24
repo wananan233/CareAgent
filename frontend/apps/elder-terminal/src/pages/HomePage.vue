@@ -19,7 +19,7 @@ const errorState = computed(() =>
 const primaryTask = computed(() => care.dashboard?.primaryTask ?? null);
 const updateTime = computed(() =>
   care.dashboard
-    ? new Date(care.dashboard.serverTime).toLocaleTimeString('zh-CN', {
+    ? new Date(care.dashboard.server_time).toLocaleTimeString('zh-CN', {
         hour: '2-digit',
         minute: '2-digit',
       })
@@ -49,11 +49,11 @@ onMounted(() => {
       <section class="home__tasks" aria-labelledby="tasks-title">
         <h2 id="tasks-title" class="home__section-title">今日任务</h2>
         <ul class="home__task-list">
-          <li v-for="task in care.tasks" :key="task.taskId" class="home__task-item">
-            <RouterLink :to="`/task/${task.taskId}`" class="home__task-link">
+          <li v-for="task in care.tasks" :key="task.task_id" class="home__task-item">
+            <RouterLink :to="`/task/${task.task_id}`" class="home__task-link">
               <span class="home__task-kind">{{ TASK_KIND_LABEL[task.kind] }}</span>
               <span class="home__task-status">
-                {{ TASK_STATUS_LABEL[task.status] }} · {{ EVIDENCE_LABEL[task.evidenceState] }}
+                {{ TASK_STATUS_LABEL[task.status] }} · {{ EVIDENCE_LABEL[task.evidence_state] }}
               </span>
             </RouterLink>
           </li>

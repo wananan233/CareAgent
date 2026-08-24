@@ -7,11 +7,11 @@ const props = defineProps<{ alert: AlertViewV1 }>();
 const emit = defineEmits<{ acknowledge: [] }>();
 
 const isCritical = computed(
-  () => props.alert.safetyLevel === 'S-1' || props.alert.safetyLevel === 'S0',
+  () => props.alert.safety_level === 'S-1' || props.alert.safety_level === 'S0',
 );
 
 const timeLabel = computed(() =>
-  new Date(props.alert.occurredAt).toLocaleString('zh-CN', {
+  new Date(props.alert.occurred_at).toLocaleString('zh-CN', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -23,13 +23,13 @@ const timeLabel = computed(() =>
 <template>
   <article class="alert-card" :class="{ 'alert-card--critical': isCritical }">
     <div class="alert-card__head">
-      <span class="alert-card__level">{{ alert.safetyLevel }}</span>
+      <span class="alert-card__level">{{ alert.safety_level }}</span>
       <h2 class="alert-card__kind">{{ ALERT_KIND_LABEL[alert.kind] }}</h2>
       <span class="alert-card__status">{{ ALERT_STATUS_LABEL[alert.status] }}</span>
     </div>
     <p class="alert-card__time">发生时间：{{ timeLabel }}</p>
     <div class="alert-card__actions">
-      <RouterLink :to="`/alert/${alert.alertId}`" class="alert-card__view">
+      <RouterLink :to="`/alert/${alert.alert_id}`" class="alert-card__view">
         查看详情
       </RouterLink>
       <button

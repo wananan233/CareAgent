@@ -141,15 +141,15 @@ export const useCareStore = defineStore('care', {
       return true;
     },
     /** 确认“已看到提醒”：携带 command_id / idempotency_key / expected_version。 */
-    async acknowledgeTask(taskId: string): Promise<AdapterResult<RequestReceiptV1>> {
-      const task = this.tasks.find((t) => t.taskId === taskId);
+    async acknowledgeTask(task_id: string): Promise<AdapterResult<RequestReceiptV1>> {
+      const task = this.tasks.find((t) => t.task_id === task_id);
       if (!task) {
         return {
           ok: false,
           error: makeError('FAILED', 'SCHEMA_INVALID', '任务不存在', false),
         };
       }
-      if (this.gateOfflineRequest('ACKNOWLEDGE_TASK', taskId)) {
+      if (this.gateOfflineRequest('ACKNOWLEDGE_TASK', task_id)) {
         return {
           ok: false,
           error: makeError('OFFLINE', 'NETWORK_OFFLINE', PENDING_RESUBMIT_LABEL, false),
@@ -159,8 +159,8 @@ export const useCareStore = defineStore('care', {
       try {
         const request = makeCareRequest({
           kind: 'ACKNOWLEDGE_TASK',
-          targetId: taskId,
-          expectedVersion: task.version,
+          targetId: task_id,
+          expected_version: task.version,
         });
         const result = await this.api.submitRequest(this.subjectId, request);
         if (result.ok) {
@@ -175,27 +175,27 @@ export const useCareStore = defineStore('care', {
       }
     },
     /** 记录“查看告警”（服务端允许的只读请求），无状态变更。 */
-    async viewAlert(alertId: string): Promise<void> {
-      const alert = this.alerts.find((a) => a.alertId === alertId);
+    async viewAlert(alert_id: string): Promise<void> {
+      const alert = this.alerts.find((a) => a.alert_id === alert_id);
       if (!alert) return;
-      if (this.gateOfflineRequest('VIEW_ALERT', alertId)) return;
+      if (this.gateOfflineRequest('VIEW_ALERT', alert_id)) return;
       const request = makeCareRequest({
         kind: 'VIEW_ALERT',
-        targetId: alertId,
-        expectedVersion: alert.version,
+        targetId: alert_id,
+        expected_version: alert.version,
       });
       await this.api.submitRequest(this.subjectId, request);
     },
     /** 确认“已看到告警”：携带 command_id / idempotency_key / expected_version。 */
-    async acknowledgeAlert(alertId: string): Promise<AdapterResult<RequestReceiptV1>> {
-      const alert = this.alerts.find((a) => a.alertId === alertId);
+    async acknowledgeAlert(alert_id: string): Promise<AdapterResult<RequestReceiptV1>> {
+      const alert = this.alerts.find((a) => a.alert_id === alert_id);
       if (!alert) {
         return {
           ok: false,
           error: makeError('FAILED', 'SCHEMA_INVALID', '告警不存在', false),
         };
       }
-      if (this.gateOfflineRequest('ACKNOWLEDGE_ALERT', alertId)) {
+      if (this.gateOfflineRequest('ACKNOWLEDGE_ALERT', alert_id)) {
         return {
           ok: false,
           error: makeError('OFFLINE', 'NETWORK_OFFLINE', OFFLINE_BLOCKED_LABEL, false),
@@ -205,8 +205,8 @@ export const useCareStore = defineStore('care', {
       try {
         const request = makeCareRequest({
           kind: 'ACKNOWLEDGE_ALERT',
-          targetId: alertId,
-          expectedVersion: alert.version,
+          targetId: alert_id,
+          expected_version: alert.version,
         });
         const result = await this.api.submitRequest(this.subjectId, request);
         if (result.ok) {

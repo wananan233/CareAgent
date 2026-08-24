@@ -39,7 +39,7 @@ describe('mock builders 产出始终通过对应 guard', () => {
   });
 
   it('builder 支持覆盖字段且仍合法', () => {
-    const task = makeCareTask({ status: 'UNKNOWN', evidenceState: 'PENDING', version: 2 });
+    const task = makeCareTask({ status: 'UNKNOWN', evidence_state: 'PENDING', version: 2 });
     expect(isCareTaskV1(task)).toBe(true);
     expect(task.status).toBe('UNKNOWN');
   });

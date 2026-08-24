@@ -7,7 +7,7 @@ const props = defineProps<{ sources: SourceRef[] }>();
 const open = ref(false);
 
 function timeLabel(s: SourceRef): string {
-  return new Date(s.occurredAt).toLocaleString('zh-CN', {
+  return new Date(s.occurred_at).toLocaleString('zh-CN', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -27,7 +27,7 @@ function timeLabel(s: SourceRef): string {
       {{ open ? '收起来源' : '查看来源' }}（{{ props.sources.length }}）
     </button>
     <ul v-if="open" class="source-drawer__list">
-      <li v-for="s in props.sources" :key="s.refId" class="source-drawer__item">
+      <li v-for="s in props.sources" :key="s.ref_id" class="source-drawer__item">
         <span class="source-drawer__label">{{ s.label }}</span>
         <span class="source-drawer__meta">{{ s.kind }} · {{ timeLabel(s) }}</span>
       </li>

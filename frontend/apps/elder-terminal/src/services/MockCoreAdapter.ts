@@ -95,7 +95,7 @@ export class MockCoreAdapter implements ElderTerminalApi {
   async getDashboard(subjectId: SubjectId): Promise<AdapterResult<DashboardViewV1>> {
     const denied = this.check(subjectId);
     if (denied) return denied;
-    // 主任务必须与 getTasks 同源（同一 taskId/version），保证详情跳转与确认后状态一致。
+    // 主任务必须与 getTasks 同源（同一 task_id/version），保证详情跳转与确认后状态一致。
     const dash = fixtureDashboard();
     return { ok: true, data: { ...dash, primaryTask: this.tasks[0] ?? null } };
   }
@@ -107,7 +107,7 @@ export class MockCoreAdapter implements ElderTerminalApi {
   async getTimeline(subjectId: SubjectId): Promise<AdapterResult<CareEventV1[]>> {
     return (
       this.check(subjectId) ??
-      { ok: true, data: this.timeline.map((e) => ({ ...e, sourceRefs: [...e.sourceRefs] })) }
+      { ok: true, data: this.timeline.map((e) => ({ ...e, source_refs: [...e.source_refs] })) }
     );
   }
 
@@ -125,11 +125,11 @@ export class MockCoreAdapter implements ElderTerminalApi {
     if (denied) return denied;
 
     // 幂等：同一 idempotency_key 只处理一次，重复提交返回同一回执。
-    const cached = this.receipts.get(request.idempotencyKey);
+    const cached = this.receipts.get(request.idempotency_key);
     if (cached) return { ok: true, data: { ...cached } };
 
     if (request.kind === 'ACKNOWLEDGE_TASK') {
-      const task = this.tasks.find((t) => t.taskId === request.targetId);
+      const task = this.tasks.find((t) => t.task_id === request.targetId);
       if (!task) {
         return {
           ok: false,
@@ -137,7 +137,7 @@ export class MockCoreAdapter implements ElderTerminalApi {
         };
       }
       // 过期版本：expected_version 与当前不一致 → VERSION_CONFLICT（不缓存，需刷新后重试）。
-      if (task.version !== request.expectedVersion) {
+      if (task.version !== request.expected_version) {
         return {
           ok: true,
           data: makeReceipt({ commandId: request.commandId, status: 'VERSION_CONFLICT' }),
@@ -148,21 +148,21 @@ export class MockCoreAdapter implements ElderTerminalApi {
       task.version += 1;
     } else if (request.kind === 'VIEW_ALERT') {
       // 查看：服务端允许的只读动作，不改变告警状态。
-      if (!this.alerts.some((a) => a.alertId === request.targetId)) {
+      if (!this.alerts.some((a) => a.alert_id === request.targetId)) {
         return {
           ok: false,
           error: makeError('FAILED', 'SCHEMA_INVALID', '告警不存在', false),
         };
       }
     } else if (request.kind === 'ACKNOWLEDGE_ALERT') {
-      const alert = this.alerts.find((a) => a.alertId === request.targetId);
+      const alert = this.alerts.find((a) => a.alert_id === request.targetId);
       if (!alert) {
         return {
           ok: false,
           error: makeError('FAILED', 'SCHEMA_INVALID', '告警不存在', false),
         };
       }
-      if (alert.version !== request.expectedVersion) {
+      if (alert.version !== request.expected_version) {
         return {
           ok: true,
           data: makeReceipt({ commandId: request.commandId, status: 'VERSION_CONFLICT' }),
@@ -174,7 +174,7 @@ export class MockCoreAdapter implements ElderTerminalApi {
     }
 
     const receipt = makeReceipt({ commandId: request.commandId, status: 'RECEIVED' });
-    this.receipts.set(request.idempotencyKey, receipt);
+    this.receipts.set(request.idempotency_key, receipt);
     return { ok: true, data: receipt };
   }
 
@@ -193,7 +193,7 @@ export class MockCoreAdapter implements ElderTerminalApi {
     if (this.agentFault === 'out_of_bounds') {
       return { ok: true, data: fixtureAgentFallback() };
     }
-    // 无来源事实：返回结构上通过 TS 类型、但 guard 会拒绝的回复（事实无 sourceRefs）。
+    // 无来源事实：返回结构上通过 TS 类型、但 guard 会拒绝的回复（事实无 source_refs）。
     if (this.agentFault === 'no_source') {
       return { ok: true, data: fixtureAgentNoSource() };
     }
@@ -212,7 +212,7 @@ export class MockCoreAdapter implements ElderTerminalApi {
     if (denied) return denied;
     return {
       ok: true,
-      data: makeConsent({ scope, status: 'REVOKED', expiresAt: new Date().toISOString() }),
+      data: makeConsent({ scope, status: 'REVOKED', expires_at: new Date().toISOString() }),
     };
   }
 }

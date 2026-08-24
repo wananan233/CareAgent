@@ -78,46 +78,46 @@ const REASON_CODES = [
 ] as const;
 
 export const isEventSource: Guard<EventSource> = (v): v is EventSource =>
-  isRecord(v) && oneOf(SOURCE_TYPES)(v.type) && isNonEmptyString(v.simulatorId);
+  isRecord(v) && oneOf(SOURCE_TYPES)(v.type) && isNonEmptyString(v.simulator_id);
 
 export const isQuality: Guard<Quality> = (v): v is Quality =>
   isRecord(v) && oneOf(QUALITY_STATUSES)(v.status) &&
   (v.reason === undefined || isString(v.reason));
 
 export const isSourceRef: Guard<SourceRef> = (v): v is SourceRef =>
-  isRecord(v) && isNonEmptyString(v.refId) && isNonEmptyString(v.kind) &&
-  isNonEmptyString(v.label) && isIsoDate(v.occurredAt);
+  isRecord(v) && isNonEmptyString(v.ref_id) && isNonEmptyString(v.kind) &&
+  isNonEmptyString(v.label) && isIsoDate(v.occurred_at);
 
 export const isCareEventV1: Guard<CareEventV1> = (v): v is CareEventV1 =>
-  isRecord(v) && isNonEmptyString(v.eventId) && oneOf(CARE_EVENT_TYPES)(v.eventType) &&
-  isIsoDate(v.occurredAt) && isEventSource(v.source) && isQuality(v.quality) &&
-  isArrayOf(isSourceRef)(v.sourceRefs);
+  isRecord(v) && isNonEmptyString(v.event_id) && oneOf(CARE_EVENT_TYPES)(v.event_type) &&
+  isIsoDate(v.occurred_at) && isEventSource(v.source) && isQuality(v.quality) &&
+  isArrayOf(isSourceRef)(v.source_refs);
 
 export const isCareTaskV1: Guard<CareTaskV1> = (v): v is CareTaskV1 =>
-  isRecord(v) && isNonEmptyString(v.taskId) && oneOf(TASK_KINDS)(v.kind) &&
-  oneOf(TASK_STATUSES)(v.status) && isIsoDate(v.scheduledAt) &&
-  oneOf(EVIDENCE_STATES)(v.evidenceState) && isNumber(v.version);
+  isRecord(v) && isNonEmptyString(v.task_id) && oneOf(TASK_KINDS)(v.kind) &&
+  oneOf(TASK_STATUSES)(v.status) && isIsoDate(v.scheduled_at) &&
+  oneOf(EVIDENCE_STATES)(v.evidence_state) && isNumber(v.version);
 
 export const isAlertViewV1: Guard<AlertViewV1> = (v): v is AlertViewV1 =>
-  isRecord(v) && isNonEmptyString(v.alertId) && oneOf(ALERT_KINDS)(v.kind) &&
-  oneOf(SAFETY_LEVELS)(v.safetyLevel) && oneOf(ALERT_STATUSES)(v.status) &&
-  isIsoDate(v.occurredAt) && isNumber(v.version);
+  isRecord(v) && isNonEmptyString(v.alert_id) && oneOf(ALERT_KINDS)(v.kind) &&
+  oneOf(SAFETY_LEVELS)(v.safety_level) && oneOf(ALERT_STATUSES)(v.status) &&
+  isIsoDate(v.occurred_at) && isNumber(v.version);
 
 export const isAgentFact: Guard<AgentFact> = (v): v is AgentFact =>
   isRecord(v) && isNonEmptyString(v.statement) &&
-  isArrayOf(isSourceRef)(v.sourceRefs) && v.sourceRefs.length > 0 &&
+  isArrayOf(isSourceRef)(v.source_refs) && v.source_refs.length > 0 &&
   oneOf(QUALITY_STATUSES)(v.confidence);
 
 export const isAgentResponseV1: Guard<AgentResponseV1> = (v): v is AgentResponseV1 =>
   isRecord(v) && isString(v.message) && isArrayOf(isAgentFact)(v.facts) &&
-  isArrayOf(isSourceRef)(v.sourceRefs) && isBoolean(v.fallback) &&
+  isArrayOf(isSourceRef)(v.source_refs) && isBoolean(v.fallback) &&
   (v.fallback
     ? isNonEmptyString(v.reasonCode)
     : v.reasonCode === undefined || isString(v.reasonCode));
 
 export const isConsentViewV1: Guard<ConsentViewV1> = (v): v is ConsentViewV1 =>
   isRecord(v) && oneOf(CONSENT_SCOPES)(v.scope) &&
-  oneOf(CONSENT_STATUSES)(v.status) && isIsoDate(v.expiresAt) && isNumber(v.version);
+  oneOf(CONSENT_STATUSES)(v.status) && isIsoDate(v.expires_at) && isNumber(v.version);
 
 export const isFact: Guard<Fact> = (v): v is Fact =>
   isRecord(v) && isNonEmptyString(v.key) && isString(v.value) &&
@@ -127,19 +127,19 @@ export const isUnknownItem: Guard<UnknownItem> = (v): v is UnknownItem =>
   isRecord(v) && isNonEmptyString(v.key) && isString(v.note);
 
 export const isContextSnapshotV1: Guard<ContextSnapshotV1> = (v): v is ContextSnapshotV1 =>
-  isRecord(v) && isNonEmptyString(v.snapshotId) && isNonEmptyString(v.purpose) &&
-  isIsoDate(v.asOf) && isArrayOf(isFact)(v.facts) &&
+  isRecord(v) && isNonEmptyString(v.snapshot_id) && isNonEmptyString(v.purpose) &&
+  isIsoDate(v.as_of) && isArrayOf(isFact)(v.facts) &&
   isArrayOf(isUnknownItem)(v.unknowns) && oneOf(FRESHNESSES)(v.freshness);
 
 export const isDashboardViewV1: Guard<DashboardViewV1> = (v): v is DashboardViewV1 =>
-  isRecord(v) && isIsoDate(v.serverTime) && isNonEmptyString(v.snapshotId) &&
+  isRecord(v) && isIsoDate(v.server_time) && isNonEmptyString(v.snapshot_id) &&
   isNonEmptyString(v.welcome) && (v.primaryTask === null || isCareTaskV1(v.primaryTask)) &&
   isNonEmptyString(v.nextAction) && oneOf(SAFETY_DISPLAY_STATUSES)(v.safetyStatus) &&
-  isArrayOf(isSourceRef)(v.sourceRefs);
+  isArrayOf(isSourceRef)(v.source_refs);
 
 export const isCareRequestV1: Guard<CareRequestV1> = (v): v is CareRequestV1 =>
-  isRecord(v) && isNonEmptyString(v.commandId) && isNonEmptyString(v.idempotencyKey) &&
-  isNumber(v.expectedVersion) && oneOf(REQUEST_KINDS)(v.kind) && isNonEmptyString(v.targetId);
+  isRecord(v) && isNonEmptyString(v.commandId) && isNonEmptyString(v.idempotency_key) &&
+  isNumber(v.expected_version) && oneOf(REQUEST_KINDS)(v.kind) && isNonEmptyString(v.targetId);
 
 export const isRequestReceiptV1: Guard<RequestReceiptV1> = (v): v is RequestReceiptV1 =>
   isRecord(v) && isNonEmptyString(v.commandId) && oneOf(RECEIPT_STATUSES)(v.status) &&

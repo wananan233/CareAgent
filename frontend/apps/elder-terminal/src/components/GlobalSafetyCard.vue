@@ -16,10 +16,10 @@ const RANK: Record<SafetyLevel, number> = {
 /** 全局不可忽略的安全卡：仅展示 S-1/S0 且仍在进行中的最高级告警。 */
 const critical = computed(() => {
   const actives = care.alerts.filter(
-    (a) => a.status === 'ACTIVE' && (a.safetyLevel === 'S-1' || a.safetyLevel === 'S0'),
+    (a) => a.status === 'ACTIVE' && (a.safety_level === 'S-1' || a.safety_level === 'S0'),
   );
   if (actives.length === 0) return null;
-  return actives.sort((a, b) => RANK[a.safetyLevel] - RANK[b.safetyLevel])[0];
+  return actives.sort((a, b) => RANK[a.safety_level] - RANK[b.safety_level])[0];
 });
 
 onMounted(() => {
@@ -31,12 +31,12 @@ onMounted(() => {
 
 <template>
   <aside v-if="critical" class="global-safety" aria-label="紧急安全提示">
-    <span class="global-safety__level">{{ critical.safetyLevel }}</span>
+    <span class="global-safety__level">{{ critical.safety_level }}</span>
     <div class="global-safety__body">
       <strong class="global-safety__kind">{{ ALERT_KIND_LABEL[critical.kind] }}</strong>
       <span class="global-safety__note">紧急安全事件，请立即关注</span>
     </div>
-    <RouterLink :to="`/alert/${critical.alertId}`" class="global-safety__action">
+    <RouterLink :to="`/alert/${critical.alert_id}`" class="global-safety__action">
       查看详情
     </RouterLink>
   </aside>

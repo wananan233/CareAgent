@@ -36,8 +36,8 @@ onMounted(() => {
       description="当前没有需要处理的安全事件。"
     />
     <ul v-else class="safety__list">
-      <li v-for="a in care.alerts" :key="a.alertId">
-        <AlertCard :alert="a" @acknowledge="care.acknowledgeAlert(a.alertId)" />
+      <li v-for="a in care.alerts" :key="a.alert_id">
+        <AlertCard :alert="a" @acknowledge="care.acknowledgeAlert(a.alert_id)" />
       </li>
     </ul>
   </PageShell>
