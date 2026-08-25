@@ -31,7 +31,7 @@ export class CoreApiAdapter implements ElderTerminalApi {
             : code === 'VERSION_CONFLICT' ? 'VERSION_CONFLICT'
               : code === 'INVALID_REQUEST' ? 'INVALID_REQUEST'
                 : 'UPSTREAM_FAILED';
-        return { ok: false, error: makeError(code, reason, error.message ?? '服务请求失败', Boolean(error.retryable)) };
+        return { ok: false, error: makeError(code, reason, error.message ?? '服务请求失败', Boolean(error.retryable), typeof error.correlation_id === 'string' ? error.correlation_id : response.headers.get('x-correlation-id') ?? undefined) };
       }
       return { ok: true, data: body as T };
     } catch (error) { return typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError' ? { ok: false, error: makeError('UNAVAILABLE', 'UPSTREAM_TIMEOUT', '服务响应超时', true) } : { ok: false, error: makeError('OFFLINE', 'NETWORK_OFFLINE', '无法连接照护服务', true) }; }
