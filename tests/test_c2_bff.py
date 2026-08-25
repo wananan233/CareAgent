@@ -1,6 +1,7 @@
 from carehub.bff import CareBff
 from carehub.core.service import CareCore
 from carehub.g2 import StaticTokenAuthenticator
+from carehub.g4 import ModelGateway
 
 
 def test_bff_me_households_and_authorized_views(tmp_path):
@@ -45,4 +46,24 @@ def test_bff_report_uses_authorized_minimal_timeline_context(tmp_path):
     response = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/report", headers={"Authorization": "Bearer alice"})
     assert response.status == 200 and response.body["fallback"] == "NONE"
     assert response.body["facts"][0]["source_refs"] == ["evt-safe"] and "raw" not in str(response.body)
+    core.close()
+
+
+def test_bff_accepts_an_explicitly_injected_model_gateway(tmp_path):
+    class ControlledProvider:
+        version = "controlled-provider.v1"
+
+        def generate(self, *, purpose, facts):
+            assert purpose == "DAILY_SUMMARY"
+            assert facts == [{"text": "MEDICATION_DUE 于 2026-08-22T09:00:00+00:00 记录。", "source_refs": ["evt-safe"]}]
+            return '{"message":"仅基于授权记录。","fact_indexes":[0]}'
+
+    core = CareCore(tmp_path / "injected-model.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    core.projections.timeline.append({"event_id": "evt-safe", "event_type": "MEDICATION_DUE", "occurred_at": "2026-08-22T09:00:00+00:00", "tenant_id": "tenant:a", "household_id": "home:a", "subject_id": "user:alice"})
+    bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"), model_gateway=ModelGateway(ControlledProvider()))
+    response = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/report", headers={"Authorization": "Bearer alice"})
+    assert response.status == 200
+    assert response.body["generator_version"] == "controlled-provider.v1"
+    assert response.body["message"] == "仅基于授权记录。"
     core.close()

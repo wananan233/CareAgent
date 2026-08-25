@@ -1,6 +1,6 @@
 import json
 
-from carehub.g4 import AgentOrchestrator, FakeProvider, ModelGateway
+from carehub.g4 import AgentOrchestrator, DeepSeekProvider, FakeProvider, ModelGateway, create_model_gateway_from_env
 from carehub.core.event_store import EventStore
 from carehub.g3 import AuthContext, ConsentLedger, ServerSidePDP
 
@@ -14,6 +14,18 @@ def test_fake_provider_is_default_and_only_receives_minimized_facts():
     assert result["fallback"] == "NONE"
     assert result["facts"] == context()["facts"]
     assert result["generator_version"] == "fake-llm.g4.v1"
+
+
+def test_linux_provider_selection_is_explicit_and_never_accepts_a_key_argument():
+    fake = create_model_gateway_from_env({})
+    assert isinstance(fake.provider, FakeProvider)
+    deepseek = create_model_gateway_from_env({"CAREHUB_MODEL_PROVIDER": "deepseek", "CAREHUB_DEEPSEEK_MODEL": "model-test"})
+    assert isinstance(deepseek.provider, DeepSeekProvider)
+    assert deepseek.provider.version == "deepseek:model-test"
+    with pytest.raises(ValueError, match="fake or deepseek"):
+        create_model_gateway_from_env({"CAREHUB_MODEL_PROVIDER": "open-router"})
+    with pytest.raises(ValueError, match="within"):
+        create_model_gateway_from_env({"CAREHUB_MODEL_PROVIDER": "deepseek", "CAREHUB_DEEPSEEK_TIMEOUT_SECONDS": "12"})
 
 
 def test_invalid_json_schema_and_out_of_range_references_fallback():

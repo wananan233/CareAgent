@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from carehub.core.service import CareCore
 from carehub.g3 import AuthContext, AuthorizedProjectionReader, ConsentLedger, ServerSidePDP
 from carehub.sse import AuthorizedStateStream
-from carehub.g4 import AgentOrchestrator
+from carehub.g4 import AgentOrchestrator, ModelGateway
 
 
 @dataclass(frozen=True)
@@ -24,13 +24,15 @@ class BffResponse:
 
 class CareBff:
     """不向客户端暴露 EventStore、投影键或原始事件 payload。"""
-    def __init__(self, *, core: CareCore, authenticator: Any) -> None:
+    def __init__(self, *, core: CareCore, authenticator: Any, model_gateway: ModelGateway | None = None) -> None:
         self.core, self.authenticator = core, authenticator
         self.ledger = ConsentLedger(core.store)
         self.pdp = ServerSidePDP(core.store, self.ledger)
         self.views = AuthorizedProjectionReader(self.pdp, core.projections)
         self.stream = AuthorizedStateStream(self.pdp)
-        self.agent = AgentOrchestrator(core.store, self.pdp)
+        # 默认网关仍是离线 FakeProvider；生产部署必须显式注入由 Linux
+        # 进程环境构造的受控网关，BFF 从不读取或保存模型密钥。
+        self.agent = AgentOrchestrator(core.store, self.pdp, gateway=model_gateway)
 
     def handle(self, *, method: str, path: str, headers: Mapping[str, str], body: Mapping[str, Any] | None = None) -> BffResponse:
         correlation_id = f"bff-{uuid.uuid4()}"

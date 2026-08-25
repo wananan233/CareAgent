@@ -10,14 +10,24 @@ G4 的 `DeepSeekProvider` 只供“今日状态”和“日报”调用。它不
 read -rsp 'DeepSeek API Key: ' DEEPSEEK_API_KEY; export DEEPSEEK_API_KEY; echo
 ```
 
-然后由部署代码创建：
+Linux 部署进程显式选择 Provider（默认值始终为离线 FakeProvider）：
+
+```bash
+export CAREHUB_MODEL_PROVIDER=deepseek
+export CAREHUB_DEEPSEEK_MODEL=deepseek-v4-flash
+export CAREHUB_DEEPSEEK_TIMEOUT_SECONDS=2
+```
+
+然后由部署代码创建并注入 BFF：
 
 ```python
-from carehub.g4 import DeepSeekProvider, ModelGateway
+from carehub.bff import CareBff
+from carehub.g4 import create_model_gateway_from_env
 
-gateway = ModelGateway(DeepSeekProvider())
+gateway = create_model_gateway_from_env()
+bff = CareBff(core=core, authenticator=authenticator, model_gateway=gateway)
 ```
 
 默认模型为 `deepseek-v4-flash`，端点为 `https://api.deepseek.com/chat/completions`，超时 2 秒。若未配置密钥或网络/服务异常，网关会返回固定模板且不展示模型原文。
 
-密钥不得传给 Care Core、浏览器、日志、数据库、事件、审计或测试 fixture。已在聊天中暴露的密钥应立即在供应商控制台撤销并更换。
+`DEEPSEEK_API_KEY` 仍只在 `DeepSeekProvider` 实际请求时从该 Linux 进程环境读取；它不得传给 Care Core、BFF 构造参数、浏览器、日志、数据库、事件、审计或测试 fixture。未设置密钥或网络/服务异常均只返回固定模板。已在聊天中暴露的密钥应立即在供应商控制台撤销并更换。
