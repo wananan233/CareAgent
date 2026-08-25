@@ -19,8 +19,16 @@ export class CoreApiAdapter implements ElderTerminalApi {
       if (!response.ok) {
         const error = body as Partial<ErrorEnvelope>;
         const bffCode = typeof (body as Record<string, unknown>).code === 'string' ? (body as Record<string, unknown>).code : undefined;
-        const code = bffCode === 'POLICY_DENIED' || bffCode === 'FORBIDDEN' ? 'FORBIDDEN' : bffCode === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : 'UNAVAILABLE';
-        const reason = code === 'FORBIDDEN' ? 'FORBIDDEN' : code === 'UNAUTHORIZED' ? 'UNAUTHORIZED' : 'UPSTREAM_FAILED';
+        const code = bffCode === 'POLICY_DENIED' || bffCode === 'FORBIDDEN' ? 'FORBIDDEN'
+          : bffCode === 'UNAUTHORIZED' ? 'UNAUTHORIZED'
+            : bffCode === 'VERSION_CONFLICT' ? 'VERSION_CONFLICT'
+              : bffCode === 'INVALID_COMMAND' || bffCode === 'INVALID_REQUEST' ? 'INVALID_REQUEST'
+                : 'UNAVAILABLE';
+        const reason = code === 'FORBIDDEN' ? 'FORBIDDEN'
+          : code === 'UNAUTHORIZED' ? 'UNAUTHORIZED'
+            : code === 'VERSION_CONFLICT' ? 'VERSION_CONFLICT'
+              : code === 'INVALID_REQUEST' ? 'INVALID_REQUEST'
+                : 'UPSTREAM_FAILED';
         return { ok: false, error: makeError(code, reason, error.message ?? '服务请求失败', Boolean(error.retryable)) };
       }
       return { ok: true, data: body as T };

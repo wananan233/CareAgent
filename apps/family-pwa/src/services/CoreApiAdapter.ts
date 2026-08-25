@@ -9,6 +9,7 @@ export interface CoreAdapter {
   createCareRequest(subjectId: string, template: 'SEND_CARE_NOTE' | 'REMINDER_PREFERENCE', idempotencyKey: string): Promise<CareRequestV1>
   getReport(subjectId: string, mode: 'normal' | 'fallback'): Promise<AgentResponseV1>
   revokeConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1>
+  relinquishConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1>
 }
 
 export class CoreApiAdapter implements CoreAdapter {
@@ -44,6 +45,10 @@ export class CoreApiAdapter implements CoreAdapter {
   }
   async revokeConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1> {
     const body = await this.request<{ consent: { scope: string; status: 'REVOKED'; revoked_at: string; version: number } }>(this.path(subjectId, `consents/${encodeURIComponent(scope)}:revoke`), { method: 'POST', body: JSON.stringify({ command_id: crypto.randomUUID(), idempotency_key: crypto.randomUUID(), expected_version: expectedVersion }) })
+    return body.consent
+  }
+  async relinquishConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1> {
+    const body = await this.request<{ consent: { scope: string; status: 'REVOKED'; revoked_at: string; version: number } }>(this.path(subjectId, `consents/${encodeURIComponent(scope)}:relinquish`), { method: 'POST', body: JSON.stringify({ command_id: crypto.randomUUID(), idempotency_key: crypto.randomUUID(), expected_version: expectedVersion }) })
     return body.consent
   }
 }

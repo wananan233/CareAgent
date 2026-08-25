@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 import json
+from urllib.parse import unquote
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Mapping
@@ -20,6 +21,11 @@ class BffResponse:
     status: int
     body: dict[str, Any]
     headers: dict[str, str]
+
+
+def parse_path_segments(path: str) -> list[str]:
+    """按路由 segment 单次解码，避免编码 ID 被当作另一主体或家庭。"""
+    return [unquote(segment) for segment in path.strip("/").split("/") if segment]
 
 
 class CareBff:
@@ -45,7 +51,7 @@ class CareBff:
         if method == "GET" and path == "/v1/households":
             rows = self.core.store.connection.execute("SELECT h.household_id, h.display_name FROM household h JOIN membership m ON m.tenant_id=h.tenant_id AND m.household_id=h.household_id WHERE m.tenant_id=? AND m.principal_id=? ORDER BY h.household_id", (context.tenant_id, context.actor_id)).fetchall()
             return self._ok({"items": [dict(row) for row in rows]}, correlation_id)
-        parts = path.strip("/").split("/")
+        parts = parse_path_segments(path)
         if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "dashboard":
             household_id, subject_id = parts[2], parts[4]
             tasks = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="tasks", purpose="view")
@@ -57,8 +63,8 @@ class CareBff:
             ).fetchone()
             if not consent: return self._error(403, "POLICY_DENIED", "当前身份无权访问该视图", correlation_id)
             return self._ok({"snapshot_id": self.core.projections.digest(), "server_time": datetime.now(timezone.utc).isoformat(), "last_updated_at": datetime.now(timezone.utc).isoformat(), "quality": "VALID", "source_refs": [{"type":"SIMULATOR","label":"CareHub 合成模拟器"}], "family_member": {"subject_id":subject_id,"household_id":household_id,"display_name":"已授权家庭成员","relationship":"家人"}, "consent":dict(consent), "allowed_actions": tasks["allowed_actions"]}, correlation_id)
-        if method == "GET" and len(path.strip("/").split("/")) == 6 and path.endswith("/stream"):
-            parts = path.strip("/").split("/")
+        if method == "GET" and len(parse_path_segments(path)) == 6 and path.endswith("/stream"):
+            parts = parse_path_segments(path)
             if parts[:2] == ["v1", "households"] and parts[3] == "subjects":
                 return self._stream(context, parts[2], parts[4], headers.get("Last-Event-ID"), correlation_id)
         if method == "POST" and path == "/v1/consents":
@@ -67,11 +73,13 @@ class CareBff:
             return self._change_consent(context, path.removeprefix("/v1/consents/").removesuffix(":activate"), body, correlation_id, "activate")
         if method == "POST" and path.startswith("/v1/consents/") and path.endswith(":revoke"):
             return self._change_consent(context, path.removeprefix("/v1/consents/").removesuffix(":revoke"), body, correlation_id, "revoke")
-        parts = path.strip("/").split("/")
+        parts = parse_path_segments(path)
         if method == "POST" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "requests":
             return self._family_command(context, parts[2], parts[4], body, correlation_id)
         if method == "POST" and len(parts) == 7 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "consents" and parts[6].endswith(":revoke"):
             return self._revoke_subject_scope(context, parts[2], parts[4], parts[6].removesuffix(":revoke"), body, correlation_id)
+        if method == "POST" and len(parts) == 7 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "consents" and parts[6].endswith(":relinquish"):
+            return self._relinquish_scope(context, parts[2], parts[4], parts[6].removesuffix(":relinquish"), body, correlation_id)
         if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "report":
             household_id, subject_id = parts[2], parts[4]
             timeline = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="timeline", purpose="view")
@@ -138,6 +146,25 @@ class CareBff:
         self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="SUCCEEDED")
         return self._ok({"consent": changed[0], "correlation_id": correlation_id}, correlation_id)
 
+    def _relinquish_scope(self, context: AuthContext, household_id: str, subject_id: str, scope: str, body: Mapping[str, Any] | None, correlation_id: str) -> BffResponse:
+        row = self.core.store.connection.execute("SELECT consent_id, version FROM consent_ledger WHERE tenant_id=? AND household_id=? AND owner=? AND grantee=? AND scope=? AND status='ACTIVE' ORDER BY version DESC LIMIT 1", (context.tenant_id, household_id, subject_id, context.actor_id, scope)).fetchone()
+        if not row: return self._error(403, "POLICY_DENIED", "当前身份无权放弃该授权", correlation_id)
+        accepted, error = self._command_meta(body, context, household_id, subject_id)
+        if error: return error
+        assert body is not None
+        if not accepted:
+            return self._ok({"status": self.core.store.command_status(body["idempotency_key"]) or "DUPLICATE", "correlation_id": correlation_id}, correlation_id)
+        if body["expected_version"] != row["version"]:
+            self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="FAILED")
+            return self._error(409, "VERSION_CONFLICT", "版本或状态已变更，请刷新后重试", correlation_id)
+        try:
+            changed = self.ledger.relinquish(row["consent_id"], actor=context.actor_id, expected_version=row["version"])
+        except (PermissionError, ValueError):
+            self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="FAILED")
+            return self._error(409, "VERSION_CONFLICT", "版本或状态已变更，请刷新后重试", correlation_id)
+        self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="SUCCEEDED")
+        return self._ok({"consent": changed, "correlation_id": correlation_id}, correlation_id)
+
     def publish_view_update(self, *, tenant_id: str, household_id: str, subject_id: str, view: str) -> int:
         return self.stream.publish(tenant_id=tenant_id, household_id=household_id, subject_id=subject_id, view=view, snapshot_id=self.core.projections.digest())
 
@@ -154,7 +181,7 @@ class CareBff:
         return BffResponse(200, {"_sse": payload}, {"X-Correlation-Id": correlation_id, "Cache-Control": "no-store", "Content-Type": "text/event-stream; charset=utf-8", "Connection": "keep-alive"})
 
     def _command_meta(self, body: Mapping[str, Any] | None, context: AuthContext, household_id: str, subject_id: str) -> tuple[bool, BffResponse | None]:
-        if not body or not isinstance(body.get("command_id"), str) or not isinstance(body.get("idempotency_key"), str) or not isinstance(body.get("expected_version"), int):
+        if not body or not isinstance(body.get("command_id"), str) or not body["command_id"] or not isinstance(body.get("idempotency_key"), str) or not body["idempotency_key"] or not isinstance(body.get("expected_version"), int) or body["expected_version"] < 1:
             return False, self._error(422, "INVALID_COMMAND", "命令必须包含 command_id、idempotency_key 与 expected_version", f"bff-{uuid.uuid4()}")
         accepted = self.core.store.accept_command(command_id=body["command_id"], idempotency_key=body["idempotency_key"], expected_version=body["expected_version"], tenant_id=context.tenant_id, household_id=household_id, subject_id=subject_id)
         return accepted, None

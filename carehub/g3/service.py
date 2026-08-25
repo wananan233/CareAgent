@@ -107,6 +107,16 @@ class ConsentLedger:
         self.store.record_audit(actor=actor, capability="revoke_consent", decision="ALLOW", reason="REVOKED", resource=f"consent:{consent_id}", tenant_id=value["tenant_id"], household_id=value["household_id"], subject_id=value["owner"])
         return value
 
+    def relinquish(self, consent_id: str, *, actor: str, expected_version: int) -> dict[str, Any]:
+        """受赠人仅可放弃授予给自己的 consent，不能替主体撤销其他授权。"""
+        row = self.store.connection.execute("SELECT * FROM consent_ledger WHERE consent_id=?", (consent_id,)).fetchone()
+        if not row or row["grantee"] != actor:
+            raise PermissionError("只有受赠人可以放弃自己的同意")
+        with self.store.connection:
+            updated = self.store.connection.execute("UPDATE consent_ledger SET status='REVOKED', revoked_at=?, version=? WHERE consent_id=? AND version=? AND status='ACTIVE'", (stamp(self.clock()), expected_version + 1, consent_id, expected_version)).rowcount
+        if updated != 1: raise ValueError("同意已撤销或版本冲突")
+        return self.get(consent_id)
+
     def get(self, consent_id: str) -> dict[str, Any]:
         row = self.store.connection.execute("SELECT * FROM consent_ledger WHERE consent_id=?", (consent_id,)).fetchone()
         if not row:

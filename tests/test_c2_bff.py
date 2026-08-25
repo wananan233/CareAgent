@@ -1,5 +1,6 @@
 import json
 from threading import Thread
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from carehub.bff import CareBff, serve_bff_local
@@ -30,8 +31,10 @@ def test_bff_me_households_and_authorized_views(tmp_path):
     assert bff.handle(method="GET", path="/v1/households", headers=headers).body["items"] == [{"household_id": "home:a", "display_name": "home:a"}]
     view = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/tasks", headers=headers)
     assert view.status == 200 and view.body["items"] == [{"task_ref": "task:one", "status": "DUE", "evidence_state": "UNKNOWN"}]
+    encoded = bff.handle(method="GET", path=f"/v1/households/{quote('home:a', safe='')}/subjects/{quote('user:alice', safe='')}/tasks", headers=headers)
+    assert encoded.status == 200 and encoded.body["items"] == view.body["items"]
     assert view.headers["ETag"] and view.body["allowed_actions"]
-    assert bff.handle(method="GET", path="/v1/households/home:b/subjects/user:alice/tasks", headers=headers).body["code"] == "POLICY_DENIED"
+    assert bff.handle(method="GET", path=f"/v1/households/{quote('home:b', safe='')}/subjects/{quote('user:alice', safe='')}/tasks", headers=headers).body["code"] == "POLICY_DENIED"
     bff.publish_view_update(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", view="tasks")
     stream = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/stream", headers=headers)
     assert stream.status == 200 and stream.headers["Content-Type"].startswith("text/event-stream") and "raw" not in stream.body["_sse"]

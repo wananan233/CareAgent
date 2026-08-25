@@ -33,7 +33,7 @@ class Projections:
             if alert:
                 alert["status"] = "RESOLVED"
         elif event_type == "MEDICATION_DUE":
-            self.tasks[self._key(event, event["aggregate"])] = {"status": "DUE", "evidence_state": "UNKNOWN", "scheduled_at": event["occurred_at"], "version": 1, "quality": event["quality"], "source_refs": [event["event_id"]], **payload}
+            self.tasks[self._key(event, event["aggregate"])] = {"task_ref": event["aggregate"], "status": "DUE", "evidence_state": "UNKNOWN", "scheduled_at": event["occurred_at"], "version": 1, "quality": event["quality"], "source_refs": [event["event_id"]], **payload}
         elif event_type == "PROMPT_REQUESTED":
             task = self.tasks.setdefault(self._key(event, payload["task_ref"]), {})
             task["last_prompt_event_id"] = event["event_id"]

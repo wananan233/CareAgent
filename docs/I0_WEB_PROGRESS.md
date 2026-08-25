@@ -3,8 +3,8 @@
 ## 代码基线
 
 - 分支：`main`
-- HEAD：`e918278`（提交后将更新）
-- 已固化授权、BFF/CORS 与双端 Adapter 修复；Synthetic launcher 与 HTTP contract tests 尚未开始。
+- HEAD：待提交的 Real HTTP contract 检查点。
+- 已固化授权、BFF/CORS、合成 protected BFF launcher 与双端真实 HTTP contract 修复。
 
 ## 已确认通过
 
@@ -20,7 +20,9 @@
 - SELF consent 撤销已修复：撤销后 dashboard、tasks、alerts、timeline、report 与 SSE 的下一次读取均拒绝。
 - BFF 已支持显式 Origin 白名单的 OPTIONS/CORS 预检；不使用通配符 Origin。
 - 双端 Adapter 已对齐 BFF scoped 写路由、consent envelope 与 PDP 错误映射。
-- 当前没有可一键启动“受保护 BFF + 内存合成 tenant/household/subject/token/active consent”的脚本。
+- `python -m scripts.run_i0_bff` 可用四个仅由当前进程环境注入的独立 Token 启动两家庭合成 protected BFF；readiness 会验证 `family-a` 可见 `household:i0-a`。
+- BFF 统一按 segment 单次解码 URL；前端保留 `encodeURIComponent`。编码 ID 与未编码 ID 读取语义一致，跨家庭编码路径仍由 PDP 拒绝。
+- 共享 ephemeral-port harness 已让 Elder/Family `CoreApiAdapter` 经真实 HTTP 调用 Python BFF；测试中不以 fetch mock 替代。
 
 ## 网页端配置（浏览器联调待运行）
 
@@ -35,6 +37,7 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 ## 未运行与阻塞
 
 - 已使用锁定的 `pnpm 9.15.4`：老人端类型检查、96 个单测与构建通过；家属端 32 个单测与构建通过。
+- Real HTTP 主链：Family 7 条、Elder 9 条通过，覆盖受保护读取、命令、relinquish/self revoke、401、403、409、422、CORS 与本地网络不可达。BFF 尚无可安全触发的真实 503/服务端延迟源，因此 503/timeout 仍未运行；Real HTTP Gate 保持 IN PROGRESS。
 - 尚未启动浏览器并检查 Network 面板真实请求。
 - 尚未运行真实 DeepSeek；未读取或设置 `DEEPSEEK_API_KEY`。
 - 尚未完成 BFF 停止后的双端故障演示。
@@ -43,13 +46,13 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| Elder → BFF | PASS（单元/构建） | 96 个单测、类型检查与构建通过 |
-| Family → BFF | PASS（单元/构建） | 32 个单测与构建通过 |
-| Auth | PARTIAL | 后端基础实现存在，网页端未验证 |
-| Scope isolation | PARTIAL | 跨 household 测试存在；SELF 撤销绕过 |
-| Controlled command | PARTIAL | 后端 JSON POST 与幂等测试通过；网页端未验证 |
+| Elder → BFF | PASS（真实 HTTP） | 9 条真实 Adapter ↔ BFF 合约测试 |
+| Family → BFF | PASS（真实 HTTP） | 7 条真实 Adapter ↔ BFF 合约测试 |
+| Auth | PASS（合约层） | 四独立 Token、401 与 cross-household 403 |
+| Scope isolation | PASS（合约层） | 编码路径、跨 household、SELF revoke 与 family relinquish |
+| Controlled command | PASS（合约层） | 双端真实 JSON POST 与命令回执 |
 | Idempotency | PASS | 后端测试 |
-| Consent revoke | PASS（代码/回归） | SELF 撤销后 BFF、Agent 与 SSE 均拒绝 |
+| Consent revoke | PASS（合约层） | SELF revoke 与 Family relinquish 后下一次读取拒绝 |
 | Agent citations | PASS | 后端测试 |
 | DeepSeek real provider | NOT RUN | 未配置进程密钥 |
 | BFF outage | NOT RUN | 未完成双端故障演示 |
