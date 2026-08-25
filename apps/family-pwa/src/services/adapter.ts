@@ -1,6 +1,6 @@
 import type { CoreAdapter } from './CoreApiAdapter'
 import { CoreApiAdapter } from './CoreApiAdapter'
-import { MockCoreAdapter } from './MockCoreAdapter'
+import { DemoAdapter } from '@carehub/mock-runtime'
 
 /** 页面只依赖此注入点；生产构建绝不静默回落到 Mock。 */
 type RuntimeEnv = Record<string, string | boolean | undefined>
@@ -12,7 +12,7 @@ export function createCoreAdapter(env: RuntimeEnv = viteEnv): CoreAdapter {
   const token = env.VITE_CAREHUB_TOKEN
   const householdId = env.VITE_CAREHUB_HOUSEHOLD_ID
   if (typeof baseUrl === 'string' && typeof token === 'string' && typeof householdId === 'string' && baseUrl && token && householdId) return new CoreApiAdapter({ baseUrl, token, householdId })
-  if (env.DEV === true) return new MockCoreAdapter()
+  if (env.DEV === true) return new DemoAdapter()
   throw new Error('BFF_CONFIGURATION_REQUIRED')
 }
 

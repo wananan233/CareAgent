@@ -3,7 +3,7 @@
 ## 代码基线
 
 - 分支：`main`
-- HEAD：待提交的 Browser Network 验收检查点。
+- HEAD：生产 Mock 构建隔离修复检查点。
 - 已固化授权、BFF/CORS、合成 protected BFF launcher 与双端真实 HTTP contract 修复。
 
 ## 已确认通过
@@ -41,8 +41,10 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 - Browser Network：ACCEPTED。真实浏览器已验证双端 scoped GET、Family relinquish、401/403/409/422 ErrorEnvelope、503 correlation_id UI 展示及 CORS exposed correlation header；未发现 silent Mock fallback。
 - GSC 首轮：GSC-01/02/03/04/05/07 PASS；GSC-06 通过独立 stop/restart 对账 runner PASS。GSC-03 证据：`artifacts/i0/gsc-01/gsc-20260825T160540Z-7f7069ba/evidence.json`；GSC-06 证据：`artifacts/i0/gsc-06/gsc-06-5a84ca8dfa/evidence.json`。
 - GSC ×3：三轮均独立 reset Synthetic BFF；GSC-01/02/03/04/05/07 与独立 GSC-06 均 PASS。汇总：`artifacts/i0/repeat/repeat-a0207a8f99.json`。
+- 生产构建 Mock 泄漏检查：PASS。Elder/Family production dist 均不含 `MockCoreAdapter`、Mock 故障类型、fixture Agent、DeepSeek 密钥名或 Token 值；开发/测试仍通过构建期别名使用 Mock，生产入口使用禁用桩且不会静默回落。
+- I0-05 故障演示：已有 GSC-06 stop/restart 对账证据；最终双端 outage 证据包待收口。
 - 尚未运行真实 DeepSeek；未读取或设置 `DEEPSEEK_API_KEY`。
-- 尚未完成 BFF 停止后的双端故障演示。
+- 尚未完成独立的双端 BFF 停止故障演示与最终 evidence manifest。
 
 ## I0 验收矩阵
 
@@ -59,10 +61,11 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 | Browser Network | ACCEPTED | 双端真实浏览器请求、Family relinquish、错误映射与 correlation_id |
 | Agent citations | PASS | 后端测试 |
 | DeepSeek real provider | NOT RUN | 未配置进程密钥 |
-| BFF outage | NOT RUN | 未完成双端故障演示 |
+| BFF outage | IN PROGRESS | GSC-06 stop/restart 证据已通过；双端 outage manifest 待收口 |
+| Mock bundle leakage | PASS | 两端 production dist 静态扫描 |
 
 ## 建议修复顺序
 
-1. **P1**：补充内存合成 BFF 启动脚本，Token 只由 Linux 进程环境提供。
-2. **P1**：增加双端真实 HTTP Adapter ↔ BFF 契约测试。
-3. **P2**：完成浏览器 Network、BFF outage 与 GSC-01～07 联调。
+1. **P1**：收口双端 BFF outage evidence manifest 与回滚材料。
+2. **P1**：在允许本地监听的 Linux 环境重跑 Python socket 回归并归档完整结果。
+3. **P2**：DeepSeek/A0 仍未运行。
