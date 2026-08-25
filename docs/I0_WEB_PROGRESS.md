@@ -40,6 +40,7 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 - Real HTTP contracts：PASS。Family 7 条、Elder 11 条通过，覆盖受保护读取、命令、relinquish/self revoke、401、403、409、422、真实 BFF 503、CORS、本地网络不可达及真实延迟触发的 Adapter timeout/cancel。503/延迟故障仅通过合成 BFF 子进程环境注入，默认关闭且不暴露给浏览器。
 - Browser Network：ACCEPTED。真实浏览器已验证双端 scoped GET、Family relinquish、401/403/409/422 ErrorEnvelope、503 correlation_id UI 展示及 CORS exposed correlation header；未发现 silent Mock fallback。
 - GSC 首轮：GSC-01/02/03/04/05/07 PASS；GSC-06 通过独立 stop/restart 对账 runner PASS。GSC-03 证据：`artifacts/i0/gsc-01/gsc-20260825T160540Z-7f7069ba/evidence.json`；GSC-06 证据：`artifacts/i0/gsc-06/gsc-06-5a84ca8dfa/evidence.json`。
+- GSC ×3：三轮均独立 reset Synthetic BFF；GSC-01/02/03/04/05/07 与独立 GSC-06 均 PASS。汇总：`artifacts/i0/repeat/repeat-a0207a8f99.json`。
 - 尚未运行真实 DeepSeek；未读取或设置 `DEEPSEEK_API_KEY`。
 - 尚未完成 BFF 停止后的双端故障演示。
 

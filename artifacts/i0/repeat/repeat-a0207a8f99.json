@@ -1,0 +1,67 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "gsc": {
+        "scenario_run_id": "gsc-20260825T160710Z-aef7104c",
+        "artifact": "artifacts/i0/gsc-01/gsc-20260825T160710Z-aef7104c/evidence.json",
+        "scenarios": {
+          "GSC-01": "PASS",
+          "GSC-02": "PASS",
+          "GSC-03": "PASS",
+          "GSC-04": "PASS",
+          "GSC-05": "PASS",
+          "GSC-06": "NOT RUN",
+          "GSC-07": "PASS"
+        }
+      },
+      "gsc06": {
+        "scenario_run_id": "gsc-06-f0a7a99733",
+        "artifact": "artifacts/i0/gsc-06/gsc-06-f0a7a99733/evidence.json",
+        "status": "PASS"
+      }
+    },
+    {
+      "round": 2,
+      "gsc": {
+        "scenario_run_id": "gsc-20260825T160711Z-b55508bc",
+        "artifact": "artifacts/i0/gsc-01/gsc-20260825T160711Z-b55508bc/evidence.json",
+        "scenarios": {
+          "GSC-01": "PASS",
+          "GSC-02": "PASS",
+          "GSC-03": "PASS",
+          "GSC-04": "PASS",
+          "GSC-05": "PASS",
+          "GSC-06": "NOT RUN",
+          "GSC-07": "PASS"
+        }
+      },
+      "gsc06": {
+        "scenario_run_id": "gsc-06-0fcdfce2df",
+        "artifact": "artifacts/i0/gsc-06/gsc-06-0fcdfce2df/evidence.json",
+        "status": "PASS"
+      }
+    },
+    {
+      "round": 3,
+      "gsc": {
+        "scenario_run_id": "gsc-20260825T160712Z-992d457b",
+        "artifact": "artifacts/i0/gsc-01/gsc-20260825T160712Z-992d457b/evidence.json",
+        "scenarios": {
+          "GSC-01": "PASS",
+          "GSC-02": "PASS",
+          "GSC-03": "PASS",
+          "GSC-04": "PASS",
+          "GSC-05": "PASS",
+          "GSC-06": "NOT RUN",
+          "GSC-07": "PASS"
+        }
+      },
+      "gsc06": {
+        "scenario_run_id": "gsc-06-3db0b225f4",
+        "artifact": "artifacts/i0/gsc-06/gsc-06-3db0b225f4/evidence.json",
+        "status": "PASS"
+      }
+    }
+  ]
+}

@@ -1,0 +1,721 @@
+{
+  "scenario_run_id": "gsc-20260825T160710Z-aef7104c",
+  "started_at": "2026-08-25T16:07:10.467864+00:00",
+  "bff": "http://127.0.0.1:8091",
+  "household": "household:i0-a",
+  "subject": "user:elder-a",
+  "scenarios": {
+    "GSC-01": {
+      "status": "PASS",
+      "reads": {
+        "dashboard": {
+          "status": 200,
+          "correlation_id": "bff-8fc1f2c0-5117-4455-bbff-14f3a2d7572d",
+          "body": {
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.476066+00:00",
+            "last_updated_at": "2026-08-25T16:07:10.476073+00:00",
+            "quality": "VALID",
+            "source_refs": [
+              {
+                "type": "SIMULATOR",
+                "label": "CareHub 合成模拟器"
+              }
+            ],
+            "family_member": {
+              "subject_id": "user:elder-a",
+              "household_id": "household:i0-a",
+              "display_name": "已授权家庭成员",
+              "relationship": "家人"
+            },
+            "consent": {
+              "scope": "view",
+              "status": "ACTIVE",
+              "expires_at": "2026-09-24T16:07:10+00:00",
+              "version": 2
+            },
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ]
+          }
+        },
+        "tasks": {
+          "status": 200,
+          "correlation_id": "bff-6dce7e58-522f-4eaa-a227-9ccd9dc6cb98",
+          "body": {
+            "items": [
+              {
+                "task_ref": "task:morning",
+                "status": "DUE",
+                "evidence_state": "UNKNOWN",
+                "scheduled_at": "2026-08-25T16:07:10+00:00",
+                "version": 1,
+                "quality": "HIGH",
+                "source_refs": [
+                  "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e"
+                ]
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.477156+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-6dce7e58-522f-4eaa-a227-9ccd9dc6cb98"
+          }
+        },
+        "alerts": {
+          "status": 200,
+          "correlation_id": "bff-3e7b6ea4-bd27-4cc7-819b-b292c15481b0",
+          "body": {
+            "items": [
+              {
+                "alert_id": "alert-scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08",
+                "kind": "SOS",
+                "safety_level": "S-1",
+                "status": "ACTIVE",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "version": 1,
+                "quality": "HIGH",
+                "source_refs": [
+                  "evt-rule-d703c022487fae9abaed0d37"
+                ]
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.478055+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-3e7b6ea4-bd27-4cc7-819b-b292c15481b0"
+          }
+        },
+        "timeline": {
+          "status": 200,
+          "correlation_id": "bff-358e945a-7c1f-4f19-8117-eac069813b7d",
+          "body": {
+            "items": [
+              {
+                "event_id": "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e",
+                "event_type": "MEDICATION_DUE",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-de901135790b7fe61259f6b5",
+                "event_type": "PROMPT_REQUESTED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08",
+                "event_type": "SOS_PRESSED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-d703c022487fae9abaed0d37",
+                "event_type": "ALERT_RAISED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-3931d9d6f9d248d770dff615",
+                "event_type": "FIXED_RESPONSE_READY",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "gsc-03-low-activity-01",
+                "event_type": "FALL_DETECTED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "LOW",
+                "observation": "LOW_CONFIDENCE_OR_UNCONFIRMED"
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.478774+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-358e945a-7c1f-4f19-8117-eac069813b7d"
+          }
+        },
+        "report": {
+          "status": 200,
+          "correlation_id": "bff-131fb93a-711c-42b0-9479-d607fea0614a",
+          "body": {
+            "schema_version": "AgentResponseV1",
+            "response_id": "response-0cd069fd-df3b-4100-8888-7fc051fddfd5",
+            "channel": "FAMILY",
+            "message": "以下内容仅基于已授权且有来源的记录。",
+            "facts": [
+              {
+                "text": "MEDICATION_DUE 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e"
+                ]
+              },
+              {
+                "text": "PROMPT_REQUESTED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-de901135790b7fe61259f6b5"
+                ]
+              },
+              {
+                "text": "SOS_PRESSED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08"
+                ]
+              },
+              {
+                "text": "ALERT_RAISED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-d703c022487fae9abaed0d37"
+                ]
+              },
+              {
+                "text": "FIXED_RESPONSE_READY 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-3931d9d6f9d248d770dff615"
+                ]
+              },
+              {
+                "text": "FALL_DETECTED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "gsc-03-low-activity-01"
+                ]
+              }
+            ],
+            "fallback": "NONE",
+            "generator_version": "fake-llm.g4.v1",
+            "reason_code": "ALLOW",
+            "agent_run_id": "run-4a346249-76a7-4f38-80f6-ea037339929e",
+            "policy_version": "v1",
+            "consent_version": 2,
+            "correlation_id": "bff-131fb93a-711c-42b0-9479-d607fea0614a"
+          }
+        }
+      },
+      "event_id": "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e",
+      "command_id": "8f17eeb1-b313-4fae-8b11-0704776cbab4",
+      "audit_id": "request-7ab2473e-d658-41f3-a3bc-fd0b7cb2f096",
+      "agent_run_id": "run-4a346249-76a7-4f38-80f6-ea037339929e"
+    },
+    "GSC-02": {
+      "status": "PASS",
+      "reads": {
+        "dashboard": {
+          "status": 200,
+          "correlation_id": "bff-8fc1f2c0-5117-4455-bbff-14f3a2d7572d",
+          "body": {
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.476066+00:00",
+            "last_updated_at": "2026-08-25T16:07:10.476073+00:00",
+            "quality": "VALID",
+            "source_refs": [
+              {
+                "type": "SIMULATOR",
+                "label": "CareHub 合成模拟器"
+              }
+            ],
+            "family_member": {
+              "subject_id": "user:elder-a",
+              "household_id": "household:i0-a",
+              "display_name": "已授权家庭成员",
+              "relationship": "家人"
+            },
+            "consent": {
+              "scope": "view",
+              "status": "ACTIVE",
+              "expires_at": "2026-09-24T16:07:10+00:00",
+              "version": 2
+            },
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ]
+          }
+        },
+        "tasks": {
+          "status": 200,
+          "correlation_id": "bff-6dce7e58-522f-4eaa-a227-9ccd9dc6cb98",
+          "body": {
+            "items": [
+              {
+                "task_ref": "task:morning",
+                "status": "DUE",
+                "evidence_state": "UNKNOWN",
+                "scheduled_at": "2026-08-25T16:07:10+00:00",
+                "version": 1,
+                "quality": "HIGH",
+                "source_refs": [
+                  "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e"
+                ]
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.477156+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-6dce7e58-522f-4eaa-a227-9ccd9dc6cb98"
+          }
+        },
+        "alerts": {
+          "status": 200,
+          "correlation_id": "bff-3e7b6ea4-bd27-4cc7-819b-b292c15481b0",
+          "body": {
+            "items": [
+              {
+                "alert_id": "alert-scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08",
+                "kind": "SOS",
+                "safety_level": "S-1",
+                "status": "ACTIVE",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "version": 1,
+                "quality": "HIGH",
+                "source_refs": [
+                  "evt-rule-d703c022487fae9abaed0d37"
+                ]
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.478055+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-3e7b6ea4-bd27-4cc7-819b-b292c15481b0"
+          }
+        },
+        "timeline": {
+          "status": 200,
+          "correlation_id": "bff-358e945a-7c1f-4f19-8117-eac069813b7d",
+          "body": {
+            "items": [
+              {
+                "event_id": "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e",
+                "event_type": "MEDICATION_DUE",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-de901135790b7fe61259f6b5",
+                "event_type": "PROMPT_REQUESTED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08",
+                "event_type": "SOS_PRESSED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-d703c022487fae9abaed0d37",
+                "event_type": "ALERT_RAISED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-3931d9d6f9d248d770dff615",
+                "event_type": "FIXED_RESPONSE_READY",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "gsc-03-low-activity-01",
+                "event_type": "FALL_DETECTED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "LOW",
+                "observation": "LOW_CONFIDENCE_OR_UNCONFIRMED"
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.478774+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-358e945a-7c1f-4f19-8117-eac069813b7d"
+          }
+        },
+        "report": {
+          "status": 200,
+          "correlation_id": "bff-131fb93a-711c-42b0-9479-d607fea0614a",
+          "body": {
+            "schema_version": "AgentResponseV1",
+            "response_id": "response-0cd069fd-df3b-4100-8888-7fc051fddfd5",
+            "channel": "FAMILY",
+            "message": "以下内容仅基于已授权且有来源的记录。",
+            "facts": [
+              {
+                "text": "MEDICATION_DUE 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e"
+                ]
+              },
+              {
+                "text": "PROMPT_REQUESTED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-de901135790b7fe61259f6b5"
+                ]
+              },
+              {
+                "text": "SOS_PRESSED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08"
+                ]
+              },
+              {
+                "text": "ALERT_RAISED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-d703c022487fae9abaed0d37"
+                ]
+              },
+              {
+                "text": "FIXED_RESPONSE_READY 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-3931d9d6f9d248d770dff615"
+                ]
+              },
+              {
+                "text": "FALL_DETECTED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "gsc-03-low-activity-01"
+                ]
+              }
+            ],
+            "fallback": "NONE",
+            "generator_version": "fake-llm.g4.v1",
+            "reason_code": "ALLOW",
+            "agent_run_id": "run-4a346249-76a7-4f38-80f6-ea037339929e",
+            "policy_version": "v1",
+            "consent_version": 2,
+            "correlation_id": "bff-131fb93a-711c-42b0-9479-d607fea0614a"
+          }
+        }
+      },
+      "event_id": "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e",
+      "command_id": "8f17eeb1-b313-4fae-8b11-0704776cbab4",
+      "audit_id": "request-7ab2473e-d658-41f3-a3bc-fd0b7cb2f096",
+      "agent_run_id": "run-4a346249-76a7-4f38-80f6-ea037339929e"
+    },
+    "GSC-03": {
+      "status": "PASS",
+      "event_id": "gsc-03-low-activity-01",
+      "agent_run_id": "run-4a346249-76a7-4f38-80f6-ea037339929e",
+      "evidence": "LOW quality is present in authorized timeline; agent context remains source-bound."
+    },
+    "GSC-04": {
+      "status": "PASS",
+      "reads": {
+        "dashboard": {
+          "status": 200,
+          "correlation_id": "bff-8fc1f2c0-5117-4455-bbff-14f3a2d7572d",
+          "body": {
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.476066+00:00",
+            "last_updated_at": "2026-08-25T16:07:10.476073+00:00",
+            "quality": "VALID",
+            "source_refs": [
+              {
+                "type": "SIMULATOR",
+                "label": "CareHub 合成模拟器"
+              }
+            ],
+            "family_member": {
+              "subject_id": "user:elder-a",
+              "household_id": "household:i0-a",
+              "display_name": "已授权家庭成员",
+              "relationship": "家人"
+            },
+            "consent": {
+              "scope": "view",
+              "status": "ACTIVE",
+              "expires_at": "2026-09-24T16:07:10+00:00",
+              "version": 2
+            },
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ]
+          }
+        },
+        "tasks": {
+          "status": 200,
+          "correlation_id": "bff-6dce7e58-522f-4eaa-a227-9ccd9dc6cb98",
+          "body": {
+            "items": [
+              {
+                "task_ref": "task:morning",
+                "status": "DUE",
+                "evidence_state": "UNKNOWN",
+                "scheduled_at": "2026-08-25T16:07:10+00:00",
+                "version": 1,
+                "quality": "HIGH",
+                "source_refs": [
+                  "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e"
+                ]
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.477156+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-6dce7e58-522f-4eaa-a227-9ccd9dc6cb98"
+          }
+        },
+        "alerts": {
+          "status": 200,
+          "correlation_id": "bff-3e7b6ea4-bd27-4cc7-819b-b292c15481b0",
+          "body": {
+            "items": [
+              {
+                "alert_id": "alert-scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08",
+                "kind": "SOS",
+                "safety_level": "S-1",
+                "status": "ACTIVE",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "version": 1,
+                "quality": "HIGH",
+                "source_refs": [
+                  "evt-rule-d703c022487fae9abaed0d37"
+                ]
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.478055+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-3e7b6ea4-bd27-4cc7-819b-b292c15481b0"
+          }
+        },
+        "timeline": {
+          "status": 200,
+          "correlation_id": "bff-358e945a-7c1f-4f19-8117-eac069813b7d",
+          "body": {
+            "items": [
+              {
+                "event_id": "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e",
+                "event_type": "MEDICATION_DUE",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-de901135790b7fe61259f6b5",
+                "event_type": "PROMPT_REQUESTED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08",
+                "event_type": "SOS_PRESSED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-d703c022487fae9abaed0d37",
+                "event_type": "ALERT_RAISED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "evt-rule-3931d9d6f9d248d770dff615",
+                "event_type": "FIXED_RESPONSE_READY",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "HIGH",
+                "observation": null
+              },
+              {
+                "event_id": "gsc-03-low-activity-01",
+                "event_type": "FALL_DETECTED",
+                "occurred_at": "2026-08-25T16:07:10+00:00",
+                "quality": "LOW",
+                "observation": "LOW_CONFIDENCE_OR_UNCONFIRMED"
+              }
+            ],
+            "reason_code": "ALLOW",
+            "allowed_actions": [
+              "delete_personal_data",
+              "memory_manage",
+              "memory_revoke",
+              "read_authorized_view"
+            ],
+            "policy_version": "v1",
+            "consent_version": 2,
+            "resource_version": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "snapshot_id": "cd9e2275214201ea1822067d665d7ae43b64de3909acf87883afa68eba82c537",
+            "server_time": "2026-08-25T16:07:10.478774+00:00",
+            "freshness": "CURRENT",
+            "correlation_id": "bff-358e945a-7c1f-4f19-8117-eac069813b7d"
+          }
+        },
+        "report": {
+          "status": 200,
+          "correlation_id": "bff-131fb93a-711c-42b0-9479-d607fea0614a",
+          "body": {
+            "schema_version": "AgentResponseV1",
+            "response_id": "response-0cd069fd-df3b-4100-8888-7fc051fddfd5",
+            "channel": "FAMILY",
+            "message": "以下内容仅基于已授权且有来源的记录。",
+            "facts": [
+              {
+                "text": "MEDICATION_DUE 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e"
+                ]
+              },
+              {
+                "text": "PROMPT_REQUESTED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-de901135790b7fe61259f6b5"
+                ]
+              },
+              {
+                "text": "SOS_PRESSED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "scenario-safety-1-evt-aeca9d25-ace4-4c7a-ab56-9adfe5164c08"
+                ]
+              },
+              {
+                "text": "ALERT_RAISED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-d703c022487fae9abaed0d37"
+                ]
+              },
+              {
+                "text": "FIXED_RESPONSE_READY 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "evt-rule-3931d9d6f9d248d770dff615"
+                ]
+              },
+              {
+                "text": "FALL_DETECTED 于 2026-08-25T16:07:10+00:00 记录。",
+                "source_refs": [
+                  "gsc-03-low-activity-01"
+                ]
+              }
+            ],
+            "fallback": "NONE",
+            "generator_version": "fake-llm.g4.v1",
+            "reason_code": "ALLOW",
+            "agent_run_id": "run-4a346249-76a7-4f38-80f6-ea037339929e",
+            "policy_version": "v1",
+            "consent_version": 2,
+            "correlation_id": "bff-131fb93a-711c-42b0-9479-d607fea0614a"
+          }
+        }
+      },
+      "event_id": "scenario-dose-1-evt-c11ba5e3-196b-4c33-9c99-62f51b0e642e",
+      "command_id": "8f17eeb1-b313-4fae-8b11-0704776cbab4",
+      "audit_id": "request-7ab2473e-d658-41f3-a3bc-fd0b7cb2f096",
+      "agent_run_id": "run-4a346249-76a7-4f38-80f6-ea037339929e"
+    },
+    "GSC-05": {
+      "status": "PASS",
+      "relinquish_status": 200,
+      "family_after_status": 403,
+      "elder_after_status": 200,
+      "correlation_id": "bff-d9e26548-bdff-49ed-b736-05c1e71acab7",
+      "audit_id": "consent-9f56eaf9-09f2-4d9b-9f99-d4cf8400a1da"
+    },
+    "GSC-06": {
+      "status": "NOT RUN",
+      "reason": "本轮未停止/恢复 BFF，避免把 HTTP Gate 证据冒充离线恢复场景。"
+    },
+    "GSC-07": {
+      "status": "PASS",
+      "family_b_own_status": 200,
+      "family_b_foreign_status": 403,
+      "correlation_id": "bff-ad85c0ae-95e0-4612-95fa-00d9dea9e9a4"
+    }
+  },
+  "finished_at": "2026-08-25T16:07:10.485482+00:00"
+}

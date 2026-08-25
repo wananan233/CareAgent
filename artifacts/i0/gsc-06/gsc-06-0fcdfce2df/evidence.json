@@ -1,0 +1,43 @@
+{
+  "scenario_run_id": "gsc-06-0fcdfce2df",
+  "status": "PASS",
+  "before_status": 200,
+  "during_stop": "REQUEST_FAILED",
+  "after_status": 200,
+  "before_event_ids": [
+    "scenario-dose-1-evt-afe1c045-ddfb-4605-a718-3c3ea5786c46",
+    "evt-rule-714fed15ec48b9e86c8f0c52",
+    "scenario-safety-1-evt-bdd0ba0a-662f-4b8d-8a46-4b7e3de3d6c9",
+    "evt-rule-a8aca2c423a435550c3d7a6e",
+    "evt-rule-3891b1d6c905e423a47e49cb",
+    "gsc-03-low-activity-01"
+  ],
+  "after_event_ids": [
+    "scenario-dose-1-evt-9cdf18fd-ee05-401a-95f1-aa170e6ce629",
+    "evt-rule-fde39b299499246a1c23237d",
+    "scenario-safety-1-evt-3e31b0e0-d350-481f-9519-73aa889b30b6",
+    "evt-rule-1f8802ceb1e758e047b35758",
+    "evt-rule-abae8c84dffc335450f3e7f5",
+    "gsc-03-low-activity-01"
+  ],
+  "before_event_types": [
+    "MEDICATION_DUE",
+    "PROMPT_REQUESTED",
+    "SOS_PRESSED",
+    "ALERT_RAISED",
+    "FIXED_RESPONSE_READY",
+    "FALL_DETECTED"
+  ],
+  "after_event_types": [
+    "MEDICATION_DUE",
+    "PROMPT_REQUESTED",
+    "SOS_PRESSED",
+    "ALERT_RAISED",
+    "FIXED_RESPONSE_READY",
+    "FALL_DETECTED"
+  ],
+  "duplicate_event_ids": 0,
+  "command_id": "N/A",
+  "audit_id": "N/A",
+  "agent_run_id": "N/A"
+}
