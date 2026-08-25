@@ -63,6 +63,8 @@ class CareBff:
         if method == "POST" and path.startswith("/v1/consents/") and path.endswith(":revoke"):
             return self._change_consent(context, path.removeprefix("/v1/consents/").removesuffix(":revoke"), body, correlation_id, "revoke")
         parts = path.strip("/").split("/")
+        if method == "POST" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "requests":
+            return self._family_command(context, parts[2], parts[4], body, correlation_id)
         if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "report":
             household_id, subject_id = parts[2], parts[4]
             timeline = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="timeline", purpose="view")
@@ -78,6 +80,31 @@ class CareBff:
             body.update({"snapshot_id": self.core.projections.digest(), "server_time": datetime.now(timezone.utc).isoformat(), "freshness": "CURRENT", "correlation_id": correlation_id})
             return self._ok(body, correlation_id, etag=body["snapshot_id"])
         return self._error(404, "NOT_FOUND", "接口不存在", correlation_id)
+
+    def _family_command(self, context: AuthContext, household_id: str, subject_id: str, body: Mapping[str, Any] | None, correlation_id: str) -> BffResponse:
+        """家属端写操作唯一入口：先授权、幂等入站、仅返回最小回执。"""
+        accepted, error = self._command_meta(body, context, household_id, subject_id)
+        if error:
+            return error
+        assert body is not None
+        if not accepted:
+            return self._ok({"status": self.core.store.command_status(body["idempotency_key"]) or "DUPLICATE", "correlation_id": correlation_id}, correlation_id)
+        view = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="tasks", purpose="view")
+        if view["reason_code"] != "ALLOW":
+            self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="DENIED")
+            return self._error(403, "POLICY_DENIED", "当前身份无权执行该操作", correlation_id)
+
+        action = body.get("action")
+        if action == "ACKNOWLEDGE_ALERT" and isinstance(body.get("resource_id"), str) and body["resource_id"]:
+            result = {"request_id": f"request-{uuid.uuid4()}", "audit_time": datetime.now(timezone.utc).isoformat(), "alert_id": body["resource_id"], "status": "RECORDED"}
+        elif action == "CREATE_CARE_REQUEST" and body.get("template") in {"SEND_CARE_NOTE", "REMINDER_PREFERENCE"}:
+            result = {"request_id": f"care-{uuid.uuid4()}", "template": body["template"], "status": "RECORDED", "audit_time": datetime.now(timezone.utc).isoformat()}
+        else:
+            self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="FAILED")
+            return self._error(422, "INVALID_REQUEST", "不支持的家属端命令", correlation_id)
+
+        self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="SUCCEEDED")
+        return self._ok(result, correlation_id)
 
     def publish_view_update(self, *, tenant_id: str, household_id: str, subject_id: str, view: str) -> int:
         return self.stream.publish(tenant_id=tenant_id, household_id=household_id, subject_id=subject_id, view=view, snapshot_id=self.core.projections.digest())

@@ -49,6 +49,22 @@ def test_bff_report_uses_authorized_minimal_timeline_context(tmp_path):
     core.close()
 
 
+def test_family_command_is_scoped_idempotent_and_returns_minimal_receipt(tmp_path):
+    core = CareCore(tmp_path / "family-command.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
+    headers = {"Authorization": "Bearer alice"}
+    command = {"command_id": "command-1", "idempotency_key": "family-key-1", "expected_version": 1, "action": "ACKNOWLEDGE_ALERT", "resource_id": "alert:one"}
+    path = "/v1/households/home:a/subjects/user:alice/requests"
+    first = bff.handle(method="POST", path=path, headers=headers, body=command)
+    assert first.status == 200 and first.body["status"] == "RECORDED" and first.body["alert_id"] == "alert:one"
+    duplicate = bff.handle(method="POST", path=path, headers=headers, body=command)
+    assert duplicate.status == 200 and duplicate.body["status"] == "SUCCEEDED"
+    denied = bff.handle(method="POST", path="/v1/households/home:b/subjects/user:alice/requests", headers=headers, body={**command, "command_id": "command-2", "idempotency_key": "family-key-2"})
+    assert denied.status == 403 and denied.body["code"] == "POLICY_DENIED"
+    core.close()
+
+
 def test_bff_accepts_an_explicitly_injected_model_gateway(tmp_path):
     class ControlledProvider:
         version = "controlled-provider.v1"
