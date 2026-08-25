@@ -51,7 +51,12 @@ class CareBff:
             tasks = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="tasks", purpose="view")
             alerts = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="alerts", purpose="view")
             if tasks["reason_code"] != "ALLOW" or alerts["reason_code"] != "ALLOW": return self._error(403, "POLICY_DENIED", "当前身份无权访问该视图", correlation_id)
-            return self._ok({"snapshot_id": self.core.projections.digest(), "server_time": datetime.now(timezone.utc).isoformat(), "last_updated_at": datetime.now(timezone.utc).isoformat(), "quality": "VALID", "source_refs": [{"type":"SIMULATOR","label":"CareHub 合成模拟器"}], "family_member": {"subject_id":subject_id,"household_id":household_id,"display_name":"已授权家庭成员","relationship":"家人"}, "consent":{"scope":"view","status":"ACTIVE","expires_at":"2099-01-01T00:00:00+00:00","version":0}, "allowed_actions": tasks["allowed_actions"]}, correlation_id)
+            consent = self.core.store.connection.execute(
+                "SELECT scope, status, expires_at, version FROM consent_ledger WHERE tenant_id=? AND household_id=? AND owner=? AND grantee=? AND scope='view' AND purpose='view' AND classification='SENSITIVE' AND channel='TERMINAL' AND status='ACTIVE' ORDER BY version DESC LIMIT 1",
+                (context.tenant_id, household_id, subject_id, context.actor_id),
+            ).fetchone()
+            if not consent: return self._error(403, "POLICY_DENIED", "当前身份无权访问该视图", correlation_id)
+            return self._ok({"snapshot_id": self.core.projections.digest(), "server_time": datetime.now(timezone.utc).isoformat(), "last_updated_at": datetime.now(timezone.utc).isoformat(), "quality": "VALID", "source_refs": [{"type":"SIMULATOR","label":"CareHub 合成模拟器"}], "family_member": {"subject_id":subject_id,"household_id":household_id,"display_name":"已授权家庭成员","relationship":"家人"}, "consent":dict(consent), "allowed_actions": tasks["allowed_actions"]}, correlation_id)
         if method == "GET" and len(path.strip("/").split("/")) == 6 and path.endswith("/stream"):
             parts = path.strip("/").split("/")
             if parts[:2] == ["v1", "households"] and parts[3] == "subjects":
@@ -112,13 +117,26 @@ class CareBff:
         """按主体和范围定位真实 consent_id；客户端不能猜测或伪造同意记录。"""
         if context.actor_id != subject_id:
             return self._error(403, "POLICY_DENIED", "当前身份无权撤销该主体授权", correlation_id)
-        row = self.core.store.connection.execute(
-            "SELECT consent_id FROM consent_ledger WHERE tenant_id=? AND household_id=? AND owner=? AND scope=? AND status='ACTIVE' ORDER BY version DESC LIMIT 1",
+        rows = self.core.store.connection.execute(
+            "SELECT consent_id, version FROM consent_ledger WHERE tenant_id=? AND household_id=? AND owner=? AND scope=? AND status='ACTIVE' ORDER BY version DESC",
             (context.tenant_id, household_id, subject_id, scope),
-        ).fetchone()
-        if not row:
+        ).fetchall()
+        if not rows:
             return self._error(404, "NOT_FOUND", "未找到可撤销的授权", correlation_id)
-        return self._change_consent(context, row["consent_id"], body, correlation_id, "revoke")
+        accepted, error = self._command_meta(body, context, household_id, subject_id)
+        if error: return error
+        assert body is not None
+        if not accepted: return self._ok({"status": self.core.store.command_status(body["idempotency_key"]) or "DUPLICATE", "correlation_id": correlation_id}, correlation_id)
+        if any(row["version"] != body["expected_version"] for row in rows):
+            self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="FAILED")
+            return self._error(409, "VERSION_CONFLICT", "版本或状态已变更，请刷新后重试", correlation_id)
+        try:
+            changed = [self.ledger.revoke(row["consent_id"], actor=context.actor_id, expected_version=row["version"]) for row in rows]
+        except (PermissionError, ValueError):
+            self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="FAILED")
+            return self._error(409, "VERSION_CONFLICT", "版本或状态已变更，请刷新后重试", correlation_id)
+        self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="SUCCEEDED")
+        return self._ok({"consent": changed[0], "correlation_id": correlation_id}, correlation_id)
 
     def publish_view_update(self, *, tenant_id: str, household_id: str, subject_id: str, view: str) -> int:
         return self.stream.publish(tenant_id=tenant_id, household_id=household_id, subject_id=subject_id, view=view, snapshot_id=self.core.projections.digest())
@@ -186,17 +204,35 @@ class CareBff:
         return BffResponse(status, {"code": code, "message": message, "retryable": status in {429, 503}, "correlation_id": correlation_id}, {"X-Correlation-Id": correlation_id, "Cache-Control": "no-store"})
 
 
-def make_bff_handler(bff: CareBff) -> type[BaseHTTPRequestHandler]:
-    """开发/演示 HTTP 适配器；业务与授权逻辑保留在 CareBff 中。"""
+def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = ()) -> type[BaseHTTPRequestHandler]:
+    """开发/演示 HTTP 适配器；只为显式允许的浏览器 Origin 返回 CORS 头。"""
     class Handler(BaseHTTPRequestHandler):
+        def _cors(self) -> None:
+            origin = self.headers.get("Origin")
+            if origin and origin in allowed_origins:
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, Last-Event-ID")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Vary", "Origin")
         def _write(self, response: BffResponse) -> None:
             is_sse = "_sse" in response.body
             raw = response.body["_sse"].encode() if is_sse else json.dumps(response.body, ensure_ascii=False).encode()
             self.send_response(response.status)
+            self._cors()
             for key, value in response.headers.items(): self.send_header(key, value)
             self.send_header("Content-Type", response.headers.get("Content-Type", "application/json; charset=utf-8"))
             self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
         def do_GET(self) -> None: self._write(bff.handle(method="GET", path=self.path, headers=dict(self.headers.items())))
+        def do_OPTIONS(self) -> None:
+            if self.headers.get("Origin") not in allowed_origins:
+                self.send_response(HTTPStatus.FORBIDDEN)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self._cors()
+            self.send_header("Content-Length", "0")
+            self.end_headers()
         def do_POST(self) -> None:
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -211,5 +247,5 @@ def make_bff_handler(bff: CareBff) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-def serve_bff_local(bff: CareBff, *, port: int = 8081) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer(("127.0.0.1", port), make_bff_handler(bff))
+def serve_bff_local(bff: CareBff, *, port: int = 8081, allowed_origins: tuple[str, ...] = ()) -> ThreadingHTTPServer:
+    return ThreadingHTTPServer(("127.0.0.1", port), make_bff_handler(bff, allowed_origins=allowed_origins))

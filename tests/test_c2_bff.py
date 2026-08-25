@@ -9,9 +9,20 @@ from carehub.g3 import ConsentLedger
 from carehub.g4 import ModelGateway
 
 
+def activate_view_consent(core, *, actor="user:alice", household_id="home:a"):
+    consent = ConsentLedger(core.store).grant(owner="user:alice", grantee=actor, household_id=household_id, scope="view", purpose="view", tenant_id="tenant:a")
+    active = ConsentLedger(core.store).activate(consent["consent_id"], actor="user:alice", expected_version=1)
+    agent = ConsentLedger(core.store).grant(owner="user:alice", grantee=actor, household_id=household_id, scope="agent_view", purpose="DAILY_SUMMARY", tenant_id="tenant:a")
+    ConsentLedger(core.store).activate(agent["consent_id"], actor="user:alice", expected_version=1)
+    stream = ConsentLedger(core.store).grant(owner="user:alice", grantee=actor, household_id=household_id, scope="view", purpose="stream", channel="SSE", tenant_id="tenant:a")
+    ConsentLedger(core.store).activate(stream["consent_id"], actor="user:alice", expected_version=1)
+    return active
+
+
 def test_bff_me_households_and_authorized_views(tmp_path):
     core = CareCore(tmp_path / "bff.db")
     core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
     core.projections.tasks[("tenant:a", "user:alice", "home:a", "task:one")] = {"task_ref": "task:one", "status": "DUE", "evidence_state": "UNKNOWN", "raw": "hidden"}
     bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
     headers = {"Authorization": "Bearer alice"}
@@ -46,6 +57,7 @@ def test_bff_consent_commands_are_idempotent_and_versioned(tmp_path):
 def test_bff_report_uses_authorized_minimal_timeline_context(tmp_path):
     core = CareCore(tmp_path / "report.db")
     core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
     core.projections.timeline.append({"event_id": "evt-safe", "event_type": "MEDICATION_DUE", "occurred_at": "2026-08-22T09:00:00+00:00", "tenant_id": "tenant:a", "household_id": "home:a", "subject_id": "user:alice", "raw": "hidden"})
     bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
     response = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/report", headers={"Authorization": "Bearer alice"})
@@ -57,6 +69,7 @@ def test_bff_report_uses_authorized_minimal_timeline_context(tmp_path):
 def test_family_command_is_scoped_idempotent_and_returns_minimal_receipt(tmp_path):
     core = CareCore(tmp_path / "family-command.db")
     core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
     bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
     headers = {"Authorization": "Bearer alice"}
     command = {"command_id": "command-1", "idempotency_key": "family-key-1", "expected_version": 1, "action": "ACKNOWLEDGE_ALERT", "resource_id": "alert:one"}
@@ -73,6 +86,7 @@ def test_family_command_is_scoped_idempotent_and_returns_minimal_receipt(tmp_pat
 def test_elder_terminal_commands_and_scope_revoke_use_the_same_bff_boundary(tmp_path):
     core = CareCore(tmp_path / "elder-command.db")
     core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
     bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
     headers = {"Authorization": "Bearer alice"}
     receipt = bff.handle(method="POST", path="/v1/households/home:a/subjects/user:alice/requests", headers=headers, body={"command_id": "elder-ack", "idempotency_key": "elder-ack-key", "expected_version": 1, "action": "ACKNOWLEDGE_TASK", "resource_id": "task:one"})
@@ -87,6 +101,7 @@ def test_elder_terminal_commands_and_scope_revoke_use_the_same_bff_boundary(tmp_
 def test_local_http_bff_forwards_json_post_commands(tmp_path):
     core = CareCore(tmp_path / "http-post.db")
     core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
     bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
     server = serve_bff_local(bff, port=0)
     thread = Thread(target=server.serve_forever, daemon=True); thread.start()
@@ -111,6 +126,7 @@ def test_bff_accepts_an_explicitly_injected_model_gateway(tmp_path):
 
     core = CareCore(tmp_path / "injected-model.db")
     core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
     core.projections.timeline.append({"event_id": "evt-safe", "event_type": "MEDICATION_DUE", "occurred_at": "2026-08-22T09:00:00+00:00", "tenant_id": "tenant:a", "household_id": "home:a", "subject_id": "user:alice"})
     bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"), model_gateway=ModelGateway(ControlledProvider()))
     response = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/report", headers={"Authorization": "Bearer alice"})
@@ -118,3 +134,30 @@ def test_bff_accepts_an_explicitly_injected_model_gateway(tmp_path):
     assert response.body["generator_version"] == "controlled-provider.v1"
     assert response.body["message"] == "仅基于授权记录。"
     core.close()
+
+
+def test_self_revoke_immediately_denies_views_agent_and_stream(tmp_path):
+    core = CareCore(tmp_path / "self-revoke.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    consent = activate_view_consent(core)
+    core.projections.timeline.append({"event_id": "evt-safe", "event_type": "MEDICATION_DUE", "occurred_at": "2026-08-22T09:00:00+00:00", "tenant_id": "tenant:a", "household_id": "home:a", "subject_id": "user:alice"})
+    bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a")); headers = {"Authorization": "Bearer alice"}; root = "/v1/households/home:a/subjects/user:alice"
+    assert bff.handle(method="GET", path=f"{root}/tasks", headers=headers).status == 200
+    assert bff.handle(method="GET", path=f"{root}/report", headers=headers).status == 200
+    revoked = bff.handle(method="POST", path=f"{root}/consents/view:revoke", headers=headers, body={"command_id": "revoke", "idempotency_key": "revoke-key", "expected_version": consent["version"]})
+    assert revoked.status == 200 and revoked.body["consent"]["status"] == "REVOKED"
+    assert [bff.handle(method="GET", path=f"{root}/{kind}", headers=headers).status for kind in ("dashboard", "tasks", "alerts", "timeline", "report", "stream")] == [403] * 6
+    core.close()
+
+
+def test_local_http_bff_cors_preflight_is_origin_restricted(tmp_path):
+    core = CareCore(tmp_path / "cors.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    server = serve_bff_local(CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a")), port=0, allowed_origins=("http://127.0.0.1:5173",))
+    thread = Thread(target=server.serve_forever, daemon=True); thread.start()
+    try:
+        request = Request(f"http://127.0.0.1:{server.server_address[1]}/v1/households", method="OPTIONS", headers={"Origin": "http://127.0.0.1:5173", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "Authorization, Content-Type"})
+        with urlopen(request, timeout=3) as response:
+            assert response.status == 204 and response.headers["Access-Control-Allow-Origin"] == "http://127.0.0.1:5173" and "Authorization" in response.headers["Access-Control-Allow-Headers"]
+    finally:
+        server.shutdown(); thread.join(timeout=3); server.server_close(); core.close()
