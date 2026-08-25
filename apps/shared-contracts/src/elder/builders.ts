@@ -164,10 +164,11 @@ export const makeError = (
   reasonCode: ReasonCode,
   message: string,
   retryable = false,
+  correlationId = makeId('corr'),
 ): ErrorEnvelope => ({
   code,
   reason_code: reasonCode,
   message,
-  correlation_id: makeId('corr'),
+  correlation_id: correlationId,
   retryable,
 })

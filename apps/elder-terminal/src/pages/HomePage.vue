@@ -41,6 +41,7 @@ onMounted(() => {
       :variant="errorState.variant"
       :title="errorState.title"
       :description="errorState.description"
+      :correlation-id="care.loadCorrelationId"
     />
     <template v-else>
       <p class="home__welcome">{{ care.dashboard?.welcome }}</p>

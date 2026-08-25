@@ -5,6 +5,7 @@ const props = defineProps<{
   variant: StateVariant;
   title: string;
   description?: string;
+  correlationId?: string | null;
 }>();
 
 const STYLES: Record<StateVariant, { color: string; label: string }> = {
@@ -45,6 +46,7 @@ const icon = {
     </div>
     <p class="state-view__title" :style="{ color: icon.color }">{{ title }}</p>
     <p v-if="description" class="state-view__description">{{ description }}</p>
+    <p v-if="correlationId" class="state-view__description">关联编号：{{ correlationId }}</p>
   </div>
 </template>
 

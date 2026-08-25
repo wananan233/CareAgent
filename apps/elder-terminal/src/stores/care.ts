@@ -17,8 +17,7 @@ import type {
   SubjectId,
 } from '@carehub/shared-contracts/elder';
 import type { AdapterResult } from '@/services/adapter';
-import { createElderTerminalApi } from '@/services/runtime';
-import { DEMO_SUBJECT_ID } from '@/scenarios/fixtures';
+import { createElderTerminalApi, runtimeSubjectId } from '@/services/runtime';
 import { useAppStore } from '@/stores/app';
 import {
   OFFLINE_BLOCKED_LABEL,
@@ -33,7 +32,7 @@ import {
  */
 export const useCareStore = defineStore('care', {
   state: () => ({
-    subjectId: DEMO_SUBJECT_ID as SubjectId,
+    subjectId: runtimeSubjectId as SubjectId,
     api: createElderTerminalApi(),
     dashboard: null as DashboardViewV1 | null,
     tasks: [] as CareTaskV1[],
@@ -44,6 +43,7 @@ export const useCareStore = defineStore('care', {
     submitting: false,
     agentLoading: false,
     loadError: null as ReasonCode | null,
+    loadCorrelationId: null as string | null,
     agentError: null as ReasonCode | null,
     receipt: null as RequestReceiptV1 | null,
     lastTrustedAt: null as string | null,
@@ -67,7 +67,7 @@ export const useCareStore = defineStore('care', {
         this.dashboard = r.data;
         this.markTrusted();
       } else {
-        this.loadError = r.error.reason_code ?? r.error.code;
+        this.loadError = r.error.reason_code ?? r.error.code; this.loadCorrelationId = r.error.correlation_id;
       }
     },
     async loadTasks() {
@@ -76,7 +76,7 @@ export const useCareStore = defineStore('care', {
         this.tasks = r.data;
         this.markTrusted();
       } else {
-        this.loadError = r.error.reason_code ?? r.error.code;
+        this.loadError = r.error.reason_code ?? r.error.code; this.loadCorrelationId = r.error.correlation_id;
       }
     },
     async loadTimeline() {
@@ -85,7 +85,7 @@ export const useCareStore = defineStore('care', {
         this.timeline = r.data;
         this.markTrusted();
       } else {
-        this.loadError = r.error.reason_code ?? r.error.code;
+        this.loadError = r.error.reason_code ?? r.error.code; this.loadCorrelationId = r.error.correlation_id;
       }
     },
     async loadAlerts() {
@@ -94,13 +94,14 @@ export const useCareStore = defineStore('care', {
         this.alerts = r.data;
         this.markTrusted();
       } else {
-        this.loadError = r.error.reason_code ?? r.error.code;
+        this.loadError = r.error.reason_code ?? r.error.code; this.loadCorrelationId = r.error.correlation_id;
       }
     },
     /** 刷新恢复：重新拉取首页/任务/时间线/告警（网络恢复后重试）。 */
     async refresh() {
       this.loading = true;
       this.loadError = null;
+      this.loadCorrelationId = null;
       try {
         await Promise.all([
           this.loadDashboard(),
@@ -116,7 +117,6 @@ export const useCareStore = defineStore('care', {
     markTrusted() {
       this.lastTrustedAt = new Date().toISOString();
       useAppStore().setLastSyncAt(this.lastTrustedAt);
-      this.loadError = null;
     },
     /** 网络恢复：重新拉取全部数据。低风险待提交请求不在此自动执行。 */
     async recover() {

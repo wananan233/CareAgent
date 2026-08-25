@@ -2,13 +2,13 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import type { DashboardV1 } from '@carehub/shared-contracts'
 import AppIcon from '@/components/AppIcon.vue'
-import { coreAdapter } from '@/services/adapter'
+import { coreAdapter, currentSubjectId } from '@/services/adapter'
 import { useUiStore } from '@/stores/ui'
 
 const dashboard = ref<DashboardV1 | null>(null)
 const loading = ref(true)
 const ui = useUiStore()
-onMounted(async () => { dashboard.value = await coreAdapter.getDashboard('subject-demo-parent-01'); ui.markTrusted(dashboard.value.last_updated_at); loading.value = false })
+onMounted(async () => { dashboard.value = await coreAdapter.getDashboard(currentSubjectId); ui.markTrusted(dashboard.value.last_updated_at); loading.value = false })
 const online = () => ui.setNetwork(false)
 const offline = () => ui.setNetwork(true)
 onMounted(() => { addEventListener('online', online); addEventListener('offline', offline) })

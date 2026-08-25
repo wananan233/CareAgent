@@ -4,6 +4,7 @@ import type { ElderTerminalApi } from './adapter';
 
 type RuntimeEnv = Record<string, string | boolean | undefined>;
 const viteEnv = (import.meta as unknown as { env: RuntimeEnv }).env;
+export const runtimeSubjectId = typeof viteEnv.VITE_CAREHUB_SUBJECT_ID === 'string' && viteEnv.VITE_CAREHUB_SUBJECT_ID ? viteEnv.VITE_CAREHUB_SUBJECT_ID : 'subject-sim-001';
 
 /** 开发模式仅在显式 mock 或未配置 BFF 时使用合成数据；生产构建绝不静默回落。 */
 export function createElderTerminalApi(env: RuntimeEnv = viteEnv): ElderTerminalApi {

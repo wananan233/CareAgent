@@ -2,11 +2,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
-import { coreAdapter } from '@/services/adapter'
-import { familyDashboardFixture } from '@/scenarios/fixtures'
+import { coreAdapter, currentSubjectId } from '@/services/adapter'
 import { useUiStore } from '@/stores/ui'
 const router = useRouter(); const ui = useUiStore(); const busy = ref(false); const confirmRevoke = ref(false); const localNotices = ref(true)
-async function revoke() { if (busy.value) return; busy.value = true; try { await coreAdapter.revokeConsent('subject-demo-parent-01', familyDashboardFixture.consent.scope, familyDashboardFixture.consent.version); ui.clearSensitiveState(); router.replace('/error/CONSENT_REVOKED') } finally { busy.value = false; confirmRevoke.value = false } }
+async function revoke() { if (busy.value) return; busy.value = true; try { const dashboard = await coreAdapter.getDashboard(currentSubjectId); await coreAdapter.relinquishConsent(currentSubjectId, dashboard.consent.scope, dashboard.consent.version); ui.clearSensitiveState(); router.replace('/error/CONSENT_REVOKED') } finally { busy.value = false; confirmRevoke.value = false } }
 function logout() { ui.clearSensitiveState(); router.replace('/error/SIGNED_OUT') }
 </script>
 <template>
