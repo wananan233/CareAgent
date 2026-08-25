@@ -74,6 +74,10 @@ def build_vision_event(
         quality=observation.confidence_bucket,
         privacy="INTERNAL",
         occurred_at=occurred_at,
+        event_id=f"vision-{aggregate_id}-{sequence}-{observation.observation_id}"[:180],
+        received_at=occurred_at,
+        correlation_id=f"corr-vision-{aggregate_id}-{sequence}",
+        trace_id=f"trace-vision-{aggregate_id}-{sequence}",
     )
 
 
