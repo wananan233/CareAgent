@@ -1,4 +1,4 @@
-import type { AgentResponseV1, AlertViewV1, CareRequestV1, CareTaskV1, ConsentRevokeReceiptV1, DashboardV1, RequestCommandV1, RequestReceiptV1 } from '@carehub/shared-contracts'
+import type { AgentResponseV1, AlertViewV1, CareRequestV1, CareTaskV1, ConsentRevokeReceiptV1, DashboardV1, RequestCommandV1, RequestReceiptV1, TimelineEventV1 } from '@carehub/shared-contracts'
 import { isDashboardV1 } from '@/contracts/guard'
 import { dailyReportFixture, fallbackReportFixture, familyDashboardFixture, medicationTaskFixture, smokeGasAlertFixture } from '@/scenarios/fixtures'
 import type { CoreAdapter } from './CoreApiAdapter'
@@ -22,6 +22,7 @@ export class MockCoreAdapter implements CoreAdapter {
     const receipt = { request_id: `req-${command.command_id}`, audit_time: '2026-08-14T10:26:00+08:00', alert_id: alertId, status: 'RECORDED' as const }; this.receipts.set(command.idempotency_key, receipt); return receipt
   }
   async getTasks(subjectId: string): Promise<CareTaskV1[]> { if (subjectId !== familyDashboardFixture.family_member.subject_id) throw new Error('FORBIDDEN'); return [structuredClone(medicationTaskFixture)] }
+  async getTimeline(subjectId: string): Promise<TimelineEventV1[]> { if (subjectId !== familyDashboardFixture.family_member.subject_id || this.revoked) throw new Error('FORBIDDEN'); return [{ event_id: 'evt-demo-001', event_type: 'MEDICATION_DUE', occurred_at: '2026-08-14T08:00:00+08:00' }] }
   async createCareRequest(subjectId: string, template: 'SEND_CARE_NOTE' | 'REMINDER_PREFERENCE', idempotencyKey: string): Promise<CareRequestV1> { if (subjectId !== familyDashboardFixture.family_member.subject_id) throw new Error('FORBIDDEN'); const old = this.careRequests.get(idempotencyKey); if (old) return old; const value = { request_id: `care-${idempotencyKey}`, template, status: 'RECORDED' as const, audit_time: '2026-08-14T11:00:00+08:00' }; this.careRequests.set(idempotencyKey, value); return value }
   async getReport(subjectId: string, mode: 'normal' | 'fallback'): Promise<AgentResponseV1> { if (subjectId !== familyDashboardFixture.family_member.subject_id) throw new Error('FORBIDDEN'); return structuredClone(mode === 'fallback' ? fallbackReportFixture : dailyReportFixture) }
   async revokeConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1> { if (subjectId !== familyDashboardFixture.family_member.subject_id || scope !== familyDashboardFixture.consent.scope) throw new Error('FORBIDDEN'); if (expectedVersion !== familyDashboardFixture.consent.version) throw new Error('VERSION_CONFLICT'); this.revoked = true; return { scope, status: 'REVOKED', revoked_at: '2026-08-14T11:30:00+08:00', version: expectedVersion + 1 } }

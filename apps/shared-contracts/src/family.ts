@@ -34,6 +34,8 @@ export interface AlertViewV1 { alert_id: string; kind: 'SMOKE_GAS'; safety_level
 export interface RequestCommandV1 { command_id: string; idempotency_key: string; expected_version: number; reason_code: 'ACKNOWLEDGE_VIEWED' }
 export interface RequestReceiptV1 { request_id: string; audit_time: string; alert_id: string; status: 'RECORDED' }
 export interface CareTaskV1 { task_id: string; kind: 'MEDICATION_DUE'; status: 'DUE' | 'REMINDING'; scheduled_at: string; evidence_state: 'UNKNOWN'; version: number; source_refs: SourceRefV1[] }
+/** BFF timeline 的最小化事实投影；不包含原始事件 payload。 */
+export interface TimelineEventV1 { event_id: string; event_type: string; occurred_at: string }
 export interface CareRequestV1 { request_id: string; template: 'SEND_CARE_NOTE' | 'REMINDER_PREFERENCE'; status: 'RECORDED'; audit_time: string }
 export type AgentFallback = 'NONE' | 'TEMPLATE_FALLBACK' | 'DETERMINISTIC_FALLBACK'
 export interface AgentFactV1 { text: string; source_refs: string[] }

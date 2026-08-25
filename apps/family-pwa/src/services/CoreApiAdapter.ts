@@ -1,10 +1,11 @@
-import type { AgentResponseV1, AlertViewV1, CareRequestV1, CareTaskV1, ConsentRevokeReceiptV1, DashboardV1, ErrorEnvelope, RequestCommandV1, RequestReceiptV1 } from '@carehub/shared-contracts'
+import type { AgentResponseV1, AlertViewV1, CareRequestV1, CareTaskV1, ConsentRevokeReceiptV1, DashboardV1, ErrorEnvelope, RequestCommandV1, RequestReceiptV1, TimelineEventV1 } from '@carehub/shared-contracts'
 
 export interface CoreAdapter {
   getDashboard(subjectId: string): Promise<DashboardV1>
   getAlerts(subjectId: string): Promise<AlertViewV1[]>
   acknowledgeAlert(subjectId: string, alertId: string, command: RequestCommandV1): Promise<RequestReceiptV1>
   getTasks(subjectId: string): Promise<CareTaskV1[]>
+  getTimeline(subjectId: string): Promise<TimelineEventV1[]>
   createCareRequest(subjectId: string, template: 'SEND_CARE_NOTE' | 'REMINDER_PREFERENCE', idempotencyKey: string): Promise<CareRequestV1>
   getReport(subjectId: string, mode: 'normal' | 'fallback'): Promise<AgentResponseV1>
   revokeConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1>
@@ -35,6 +36,7 @@ export class CoreApiAdapter implements CoreAdapter {
     const view = await this.request<{ items: CareTaskV1[] }>(`/v1/households/${encodeURIComponent(this.options.householdId)}/subjects/${encodeURIComponent(subjectId)}/tasks`)
     return view.items
   }
+  async getTimeline(subjectId: string): Promise<TimelineEventV1[]> { return (await this.request<{ items: TimelineEventV1[] }>(this.path(subjectId, 'timeline'))).items }
   async createCareRequest(subjectId: string, template: 'SEND_CARE_NOTE' | 'REMINDER_PREFERENCE', idempotencyKey: string): Promise<CareRequestV1> { return this.request(this.path(subjectId, 'requests'), { method: 'POST', body: JSON.stringify({ command_id: crypto.randomUUID(), idempotency_key: idempotencyKey, expected_version: 1, action: 'CREATE_CARE_REQUEST', template }) }) }
   async getReport(subjectId: string, mode: 'normal' | 'fallback'): Promise<AgentResponseV1> {
     if (mode === 'fallback') throw new Error('SIMULATED_FALLBACK_UNAVAILABLE')
