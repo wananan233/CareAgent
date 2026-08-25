@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from typing import Mapping
 
 from carehub.bff import CareBff, serve_bff_local
 from carehub.core.scenario import ScenarioService
@@ -13,11 +14,11 @@ TENANT = "tenant:i0-demo"
 HOUSEHOLDS = (("household:i0-a", "user:elder-a", "user:family-a"), ("household:i0-b", "user:elder-b", "user:family-b"))
 
 
-def build(token: str) -> CareBff:
-    if not token:
-        raise ValueError("CAREHUB_I0_BFF_TOKEN 不能为空")
+def build(tokens: Mapping[str, str]) -> CareBff:
+    required = {"elder_a": "user:elder-a", "family_a": "user:family-a", "elder_b": "user:elder-b", "family_b": "user:family-b"}
+    if set(tokens) != set(required) or not all(tokens.values()) or len(set(tokens.values())) != len(tokens):
+        raise ValueError("必须提供四个互不相同的 I0 演示 Token")
     core = CareCore(":memory:")
-    identities: dict[str, str] = {}
     for index, (household, elder, family) in enumerate(HOUSEHOLDS, 1):
         for actor, role in ((elder, "SELF"), (family, "FAMILY")):
             core.store.register_scope(tenant_id=TENANT, household_id=household, subject_id=elder, principal_id=actor, role=role)
@@ -28,15 +29,14 @@ def build(token: str) -> CareBff:
         scenario = ScenarioService(core)
         scenario.run(scenario="DOSE", seed=index, tenant_id=TENANT, household_id=household, subject_id=elder)
         scenario.run(scenario="SAFETY", seed=index, tenant_id=TENANT, household_id=household, subject_id=elder)
-    identities[token] = "user:elder-a"
-    return CareBff(core=core, authenticator=StaticTokenAuthenticator(identities, tenant_id=TENANT))
+    return CareBff(core=core, authenticator=StaticTokenAuthenticator({tokens[name]: actor for name, actor in required.items()}, tenant_id=TENANT))
 
 
 if __name__ == "__main__":
-    token = os.environ.get("CAREHUB_I0_BFF_TOKEN", "")
+    tokens = {"elder_a": os.environ.get("CAREHUB_I0_ELDER_A_TOKEN", ""), "family_a": os.environ.get("CAREHUB_I0_FAMILY_A_TOKEN", ""), "elder_b": os.environ.get("CAREHUB_I0_ELDER_B_TOKEN", ""), "family_b": os.environ.get("CAREHUB_I0_FAMILY_B_TOKEN", "")}
     port = int(os.environ.get("CAREHUB_I0_BFF_PORT", "8081"))
     origins = tuple(item for item in os.environ.get("CAREHUB_I0_ALLOWED_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if item)
-    bff = build(token); server = serve_bff_local(bff, port=port, allowed_origins=origins)
+    bff = build(tokens); server = serve_bff_local(bff, port=port, allowed_origins=origins)
     print(f"I0 BFF: http://127.0.0.1:{port}; household:i0-a/user:elder-a", flush=True)
     try: server.serve_forever()
     except KeyboardInterrupt: pass
