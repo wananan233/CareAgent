@@ -117,8 +117,6 @@ class ConsentLedger:
         return self.active_consent(request) is not None
 
     def active_consent(self, request: PrivacyAccessRequest) -> dict[str, Any] | None:
-        if request.actor == request.owner:
-            return {"consent_id": "SELF", "version": 0} if request.role == "SELF" else None
         rows = self.store.connection.execute(
             "SELECT * FROM consent_ledger WHERE tenant_id=? AND owner=? AND grantee=? AND scope=?",
             (request.tenant_id, request.owner, request.actor, request.scope),

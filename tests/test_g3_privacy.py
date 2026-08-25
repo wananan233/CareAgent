@@ -14,6 +14,9 @@ class Clock:
 @pytest.fixture
 def g3(tmp_path):
     clock = Clock(); store = EventStore(tmp_path / "g3.db"); service = G3Service(store, clock)
+    store.register_scope(tenant_id="tenant:synthetic", household_id="home-a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    consent = service.ledger.grant(owner="user:alice", grantee="user:alice", household_id="home-a", scope="memory_manage", purpose="memory", tenant_id="tenant:synthetic")
+    service.ledger.activate(consent["consent_id"], actor="user:alice", expected_version=1)
     yield service, store, clock
     store.close()
 

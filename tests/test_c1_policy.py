@@ -59,6 +59,8 @@ def test_expired_consent_is_persisted_as_expired_and_denied(tmp_path):
 def test_protected_projection_is_minimized_and_includes_allowed_actions(tmp_path):
     store = EventStore(tmp_path / "views.db"); ledger = ConsentLedger(store); pdp = ServerSidePDP(store, ledger)
     store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    consent = ledger.grant(owner="user:alice", grantee="user:alice", household_id="home:a", scope="view", purpose="view", tenant_id="tenant:a")
+    ledger.activate(consent["consent_id"], actor="user:alice", expected_version=1)
     projections = Projections(tasks={("tenant:a", "user:alice", "home:a", "task:1"): {"task_ref": "task:1", "status": "DUE", "evidence_state": "UNKNOWN", "raw_secret": "must-not-leak"}})
     view = AuthorizedProjectionReader(pdp, projections).read(context=AuthContext("user:alice", "tenant:a"), household_id="home:a", subject_id="user:alice", kind="tasks", purpose="view", resource_version="v7")
     assert view["items"] == [{"task_ref": "task:1", "status": "DUE", "evidence_state": "UNKNOWN"}]
