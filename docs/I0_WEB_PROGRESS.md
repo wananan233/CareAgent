@@ -39,6 +39,7 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 - 已使用锁定的 `pnpm 9.15.4`：老人端类型检查、96 个单测与构建通过；家属端 32 个单测与构建通过。
 - Real HTTP contracts：PASS。Family 7 条、Elder 11 条通过，覆盖受保护读取、命令、relinquish/self revoke、401、403、409、422、真实 BFF 503、CORS、本地网络不可达及真实延迟触发的 Adapter timeout/cancel。503/延迟故障仅通过合成 BFF 子进程环境注入，默认关闭且不暴露给浏览器。
 - Browser Network：ACCEPTED。真实浏览器已验证双端 scoped GET、Family relinquish、401/403/409/422 ErrorEnvelope、503 correlation_id UI 展示及 CORS exposed correlation header；未发现 silent Mock fallback。
+- GSC 首轮 runner：已建立 `python -m scripts.run_gsc_i0`，首轮证据 `artifacts/i0/gsc-01/gsc-20260825T155502Z-aea814a9/evidence.json`；GSC-01/02/04 为真实 BFF 读取/命令证据，GSC-03/05/06/07 为 NOT RUN。
 - 尚未运行真实 DeepSeek；未读取或设置 `DEEPSEEK_API_KEY`。
 - 尚未完成 BFF 停止后的双端故障演示。
 
