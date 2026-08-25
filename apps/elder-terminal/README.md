@@ -52,4 +52,4 @@ apps/elder-terminal/
 └── vite.config.ts
 ```
 
-当前 `CoreApiAdapter` 仍是尚未接入真实 BFF 的占位实现；演示数据来自 `MockCoreAdapter`。
+`CoreApiAdapter` 已接入受保护 BFF 的 dashboard、tasks、alerts、timeline、日报 Agent、受控确认命令和按 scope 撤销授权路由。开发环境未配置 BFF 时仍使用 `MockCoreAdapter`；生产构建缺少 BFF 配置会显式失败，不会静默回落。所有数据仍限合成演示数据。

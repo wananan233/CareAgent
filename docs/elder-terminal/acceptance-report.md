@@ -34,4 +34,4 @@
 - `MEDICATION_DUE` 的证据状态保持 `UNKNOWN`，不得推断已服药。
 - `SMOKE_GAS` 告警只能由 `OPEN` 变为 `VIEWED`，前端不能解除或降级 S-1/S0。
 - Agent 无来源事实会被 guard 拒绝，回退使用家庭端契约枚举。
-- 真实 BFF 尚未接入，`CoreApiAdapter` 仍为受控占位实现。
+- 真实 BFF 已通过 `CoreApiAdapter` 接入；未配置 BFF 的开发模式仍使用 Mock，生产模式不允许静默回落。
