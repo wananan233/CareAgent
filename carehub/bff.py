@@ -197,6 +197,16 @@ def make_bff_handler(bff: CareBff) -> type[BaseHTTPRequestHandler]:
             self.send_header("Content-Type", response.headers.get("Content-Type", "application/json; charset=utf-8"))
             self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
         def do_GET(self) -> None: self._write(bff.handle(method="GET", path=self.path, headers=dict(self.headers.items())))
+        def do_POST(self) -> None:
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                decoded = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+                if not isinstance(decoded, dict):
+                    raise ValueError
+            except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+                self._write(bff._error(400, "INVALID_REQUEST", "请求正文必须是 JSON 对象", f"bff-{uuid.uuid4()}"))
+                return
+            self._write(bff.handle(method="POST", path=self.path, headers=dict(self.headers.items()), body=decoded))
         def log_message(self, format: str, *args: Any) -> None: del format, args
     return Handler
 
