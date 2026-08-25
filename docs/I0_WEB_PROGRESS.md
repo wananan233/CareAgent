@@ -3,7 +3,7 @@
 ## 代码基线
 
 - 分支：`main`
-- HEAD：待提交的 Real HTTP contract 验收检查点。
+- HEAD：待提交的 Browser Network 验收检查点。
 - 已固化授权、BFF/CORS、合成 protected BFF launcher 与双端真实 HTTP contract 修复。
 
 ## 已确认通过
@@ -38,7 +38,7 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 
 - 已使用锁定的 `pnpm 9.15.4`：老人端类型检查、96 个单测与构建通过；家属端 32 个单测与构建通过。
 - Real HTTP contracts：PASS。Family 7 条、Elder 11 条通过，覆盖受保护读取、命令、relinquish/self revoke、401、403、409、422、真实 BFF 503、CORS、本地网络不可达及真实延迟触发的 Adapter timeout/cancel。503/延迟故障仅通过合成 BFF 子进程环境注入，默认关闭且不暴露给浏览器。
-- 尚未启动浏览器并检查 Network 面板真实请求。
+- Browser Network：ACCEPTED。真实浏览器已验证双端 scoped GET、Family relinquish、401/403/409/422 ErrorEnvelope、503 correlation_id UI 展示及 CORS exposed correlation header；未发现 silent Mock fallback。
 - 尚未运行真实 DeepSeek；未读取或设置 `DEEPSEEK_API_KEY`。
 - 尚未完成 BFF 停止后的双端故障演示。
 
@@ -54,6 +54,7 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 | Idempotency | PASS | 后端测试 |
 | Consent revoke | PASS（合约层） | SELF revoke 与 Family relinquish 后下一次读取拒绝 |
 | Real HTTP contracts | PASS | Family 7 条、Elder 11 条，完整回归通过 |
+| Browser Network | ACCEPTED | 双端真实浏览器请求、Family relinquish、错误映射与 correlation_id |
 | Agent citations | PASS | 后端测试 |
 | DeepSeek real provider | NOT RUN | 未配置进程密钥 |
 | BFF outage | NOT RUN | 未完成双端故障演示 |

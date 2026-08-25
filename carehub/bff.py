@@ -241,6 +241,7 @@ def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = (), tes
                 self.send_header("Access-Control-Allow-Origin", origin)
                 self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, Last-Event-ID")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Expose-Headers", "X-Correlation-Id")
                 self.send_header("Vary", "Origin")
         def _write(self, response: BffResponse) -> None:
             is_sse = "_sse" in response.body
