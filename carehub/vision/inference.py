@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+import re
 
 from .events import VisionObservation
 
 _FORBIDDEN_KEYS = frozenset({"frame", "frame_path", "video", "video_path", "face", "face_id", "name", "person_id", "bbox", "xyxy"})
+_PII_PATTERN = re.compile(r"(?:1[3-9]\d{9}|(?:姓名|电话|地址)\s*[:：]|\r|\n)")
 
 
 def observations_from_detections(detections: Iterable[Mapping[str, object]]) -> tuple[VisionObservation, ...]:
@@ -18,6 +20,8 @@ def observations_from_detections(detections: Iterable[Mapping[str, object]]) -> 
         observation_id, label, confidence = detection.get("observation_id"), detection.get("label"), detection.get("confidence")
         if not isinstance(observation_id, str) or not observation_id or not isinstance(label, str) or not label:
             raise ValueError("observation_id and label must be non-empty strings")
+        if _PII_PATTERN.search(label) or _PII_PATTERN.search(observation_id):
+            raise ValueError("vision detection contains possible PII")
         if not isinstance(confidence, (int, float)) or isinstance(confidence, bool) or not 0 <= confidence <= 1:
             raise ValueError("confidence must be within [0, 1]")
         bucket = "HIGH" if confidence >= 0.8 else "MEDIUM" if confidence >= 0.5 else "LOW"
