@@ -2,5 +2,6 @@
 
 from .events import VisionObservation, build_vision_event, confirm_observation
 from .inference import observations_from_detections
+from .pipeline import ingest_detections
 
-__all__ = ["VisionObservation", "build_vision_event", "confirm_observation", "observations_from_detections"]
+__all__ = ["VisionObservation", "build_vision_event", "confirm_observation", "observations_from_detections", "ingest_detections"]
