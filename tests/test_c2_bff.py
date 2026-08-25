@@ -1,6 +1,11 @@
-from carehub.bff import CareBff
+import json
+from threading import Thread
+from urllib.request import Request, urlopen
+
+from carehub.bff import CareBff, serve_bff_local
 from carehub.core.service import CareCore
 from carehub.g2 import StaticTokenAuthenticator
+from carehub.g3 import ConsentLedger
 from carehub.g4 import ModelGateway
 
 
@@ -63,6 +68,36 @@ def test_family_command_is_scoped_idempotent_and_returns_minimal_receipt(tmp_pat
     denied = bff.handle(method="POST", path="/v1/households/home:b/subjects/user:alice/requests", headers=headers, body={**command, "command_id": "command-2", "idempotency_key": "family-key-2"})
     assert denied.status == 403 and denied.body["code"] == "POLICY_DENIED"
     core.close()
+
+
+def test_elder_terminal_commands_and_scope_revoke_use_the_same_bff_boundary(tmp_path):
+    core = CareCore(tmp_path / "elder-command.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
+    headers = {"Authorization": "Bearer alice"}
+    receipt = bff.handle(method="POST", path="/v1/households/home:a/subjects/user:alice/requests", headers=headers, body={"command_id": "elder-ack", "idempotency_key": "elder-ack-key", "expected_version": 1, "action": "ACKNOWLEDGE_TASK", "resource_id": "task:one"})
+    assert receipt.status == 200 and receipt.body["status"] == "RECORDED"
+    consent = ConsentLedger(core.store).grant(owner="user:alice", grantee="user:alice", household_id="home:a", scope="timeline", purpose="view", tenant_id="tenant:a")
+    consent = ConsentLedger(core.store).activate(consent["consent_id"], actor="user:alice", expected_version=1)
+    revoked = bff.handle(method="POST", path="/v1/households/home:a/subjects/user:alice/consents/timeline:revoke", headers=headers, body={"command_id": "elder-revoke", "idempotency_key": "elder-revoke-key", "expected_version": consent["version"]})
+    assert revoked.status == 200 and revoked.body["consent"]["status"] == "REVOKED"
+    core.close()
+
+
+def test_local_http_bff_forwards_json_post_commands(tmp_path):
+    core = CareCore(tmp_path / "http-post.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"))
+    server = serve_bff_local(bff, port=0)
+    thread = Thread(target=server.serve_forever, daemon=True); thread.start()
+    try:
+        payload = json.dumps({"command_id": "http-ack", "idempotency_key": "http-ack-key", "expected_version": 1, "action": "ACKNOWLEDGE_TASK", "resource_id": "task:one"}).encode()
+        request = Request(f"http://127.0.0.1:{server.server_address[1]}/v1/households/home:a/subjects/user:alice/requests", data=payload, method="POST", headers={"Authorization": "Bearer alice", "Content-Type": "application/json"})
+        with urlopen(request, timeout=3) as response:
+            body = json.loads(response.read().decode())
+        assert body["status"] == "RECORDED"
+    finally:
+        server.shutdown(); thread.join(timeout=3); server.server_close(); core.close()
 
 
 def test_bff_accepts_an_explicitly_injected_model_gateway(tmp_path):

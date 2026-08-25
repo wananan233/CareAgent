@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** Core API 基础路径（预留，未来 CoreApiAdapter 使用） */
-  readonly VITE_API_BASE_URL?: string;
-  /** 演示模式：mock = 使用 MockCoreAdapter（当前唯一支持值） */
+  readonly VITE_CAREHUB_BFF_URL?: string;
+  readonly VITE_CAREHUB_TOKEN?: string;
+  readonly VITE_CAREHUB_HOUSEHOLD_ID?: string;
+  /** 演示模式：mock = 使用 MockCoreAdapter。 */
   readonly VITE_DEMO_MODE?: 'mock';
 }

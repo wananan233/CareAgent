@@ -13,4 +13,6 @@
 
 ## 实现状态
 
-`MockCoreAdapter` 提供纯合成 fixtures、幂等处理、版本冲突和故障注入。`CoreApiAdapter` 当前返回 `UNAVAILABLE`，并通过扩展原因 `NOT_IMPLEMENTED` 表示真实 BFF 尚未接入。
+`MockCoreAdapter` 提供纯合成 fixtures、幂等处理、版本冲突和故障注入。`CoreApiAdapter` 已通过受保护的家庭/主体 BFF 路由读取 dashboard、tasks、alerts、timeline 和日报 Agent，并通过同一 BFF 边界提交确认命令、按 scope 定位并撤销真实 consent。HTTP 失败统一映射为 `NETWORK_OFFLINE` 或 BFF 的扁平错误信封；不完整 DTO 显式返回 `SCHEMA_INVALID`。
+
+运行时仅在 `VITE_DEMO_MODE=mock` 或开发环境未配置 BFF 时使用 Mock。真实 BFF 模式需要 `VITE_CAREHUB_BFF_URL`、`VITE_CAREHUB_TOKEN` 与 `VITE_CAREHUB_HOUSEHOLD_ID`；生产构建不会静默回落到 Mock。

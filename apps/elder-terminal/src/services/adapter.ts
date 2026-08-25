@@ -39,4 +39,7 @@ export interface ElderTerminalApi {
   ): Promise<AdapterResult<RequestReceiptV1>>;
   chat(subjectId: SubjectId, text: string): Promise<AdapterResult<AgentResponseV1>>;
   revokeConsent(subjectId: SubjectId, scope: ConsentScope): Promise<AdapterResult<ConsentViewV1>>;
+  /** 开发/验收故障注入；真实适配器忽略该调用，绝不把控制能力发送到 BFF。 */
+  setFault(fault: 'none' | 'offline' | 'denied' | 'failed' | 'timeout'): void;
+  setAgentFault(fault: 'none' | 'timeout' | 'out_of_bounds' | 'no_source'): void;
 }

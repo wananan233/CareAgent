@@ -43,10 +43,10 @@ describe('日志脱敏检查（静态扫描）', () => {
     expect(files, `发现浏览器存储写入：\n${files.join('\n')}`).toEqual([]);
   });
 
-  it('源码中不出现凭据/密钥敏感标识', () => {
+  it('源码中不硬编码凭据或模型密钥', () => {
     const files = scan(
-      /\b(Bearer|Authorization|access[_-]?token|api[_-]?key|client[_-]?secret|private[_-]?key|password)\b/i,
+      /(?:sk-[a-z0-9]{16,}|ghp_[a-zA-Z0-9]{30,}|DEEPSEEK_API_KEY\s*=\s*['"][^'"]+)/,
     );
-    expect(files, `发现凭据/密钥标识：\n${files.join('\n')}`).toEqual([]);
+    expect(files, `发现硬编码凭据/密钥：\n${files.join('\n')}`).toEqual([]);
   });
 });

@@ -65,6 +65,8 @@ class CareBff:
         parts = path.strip("/").split("/")
         if method == "POST" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "requests":
             return self._family_command(context, parts[2], parts[4], body, correlation_id)
+        if method == "POST" and len(parts) == 7 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "consents" and parts[6].endswith(":revoke"):
+            return self._revoke_subject_scope(context, parts[2], parts[4], parts[6].removesuffix(":revoke"), body, correlation_id)
         if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "report":
             household_id, subject_id = parts[2], parts[4]
             timeline = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="timeline", purpose="view")
@@ -95,7 +97,7 @@ class CareBff:
             return self._error(403, "POLICY_DENIED", "当前身份无权执行该操作", correlation_id)
 
         action = body.get("action")
-        if action == "ACKNOWLEDGE_ALERT" and isinstance(body.get("resource_id"), str) and body["resource_id"]:
+        if action in {"ACKNOWLEDGE_TASK", "VIEW_ALERT", "ACKNOWLEDGE_ALERT"} and isinstance(body.get("resource_id"), str) and body["resource_id"]:
             result = {"request_id": f"request-{uuid.uuid4()}", "audit_time": datetime.now(timezone.utc).isoformat(), "alert_id": body["resource_id"], "status": "RECORDED"}
         elif action == "CREATE_CARE_REQUEST" and body.get("template") in {"SEND_CARE_NOTE", "REMINDER_PREFERENCE"}:
             result = {"request_id": f"care-{uuid.uuid4()}", "template": body["template"], "status": "RECORDED", "audit_time": datetime.now(timezone.utc).isoformat()}
@@ -105,6 +107,18 @@ class CareBff:
 
         self.core.store.complete_command(idempotency_key=body["idempotency_key"], status="SUCCEEDED")
         return self._ok(result, correlation_id)
+
+    def _revoke_subject_scope(self, context: AuthContext, household_id: str, subject_id: str, scope: str, body: Mapping[str, Any] | None, correlation_id: str) -> BffResponse:
+        """按主体和范围定位真实 consent_id；客户端不能猜测或伪造同意记录。"""
+        if context.actor_id != subject_id:
+            return self._error(403, "POLICY_DENIED", "当前身份无权撤销该主体授权", correlation_id)
+        row = self.core.store.connection.execute(
+            "SELECT consent_id FROM consent_ledger WHERE tenant_id=? AND household_id=? AND owner=? AND scope=? AND status='ACTIVE' ORDER BY version DESC LIMIT 1",
+            (context.tenant_id, household_id, subject_id, scope),
+        ).fetchone()
+        if not row:
+            return self._error(404, "NOT_FOUND", "未找到可撤销的授权", correlation_id)
+        return self._change_consent(context, row["consent_id"], body, correlation_id, "revoke")
 
     def publish_view_update(self, *, tenant_id: str, household_id: str, subject_id: str, view: str) -> int:
         return self.stream.publish(tenant_id=tenant_id, household_id=household_id, subject_id=subject_id, view=view, snapshot_id=self.core.projections.digest())
@@ -183,6 +197,16 @@ def make_bff_handler(bff: CareBff) -> type[BaseHTTPRequestHandler]:
             self.send_header("Content-Type", response.headers.get("Content-Type", "application/json; charset=utf-8"))
             self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
         def do_GET(self) -> None: self._write(bff.handle(method="GET", path=self.path, headers=dict(self.headers.items())))
+        def do_POST(self) -> None:
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                decoded = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+                if not isinstance(decoded, dict):
+                    raise ValueError
+            except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+                self._write(bff._error(400, "INVALID_REQUEST", "请求正文必须是 JSON 对象", f"bff-{uuid.uuid4()}"))
+                return
+            self._write(bff.handle(method="POST", path=self.path, headers=dict(self.headers.items()), body=decoded))
         def log_message(self, format: str, *args: Any) -> None: del format, args
     return Handler
 

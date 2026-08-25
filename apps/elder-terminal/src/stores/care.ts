@@ -17,7 +17,7 @@ import type {
   SubjectId,
 } from '@carehub/shared-contracts/elder';
 import type { AdapterResult } from '@/services/adapter';
-import { MockCoreAdapter } from '@/services/MockCoreAdapter';
+import { createElderTerminalApi } from '@/services/runtime';
 import { DEMO_SUBJECT_ID } from '@/scenarios/fixtures';
 import { useAppStore } from '@/stores/app';
 import {
@@ -28,13 +28,13 @@ import {
 } from '@/contracts/offlinePolicy';
 
 /**
- * 老人端数据视图模型（非业务事实源）：事实仍来自 MockCoreAdapter，Pinia 仅缓存
+ * 老人端数据视图模型（非业务事实源）：事实来自受控 BFF 或开发 Mock，Pinia 仅缓存
  * 最近一次成功的投影用于渲染。业务状态必须带 snapshot/version/source/quality。
  */
 export const useCareStore = defineStore('care', {
   state: () => ({
     subjectId: DEMO_SUBJECT_ID as SubjectId,
-    api: new MockCoreAdapter(),
+    api: createElderTerminalApi(),
     dashboard: null as DashboardViewV1 | null,
     tasks: [] as CareTaskV1[],
     timeline: [] as CareEventV1[],
