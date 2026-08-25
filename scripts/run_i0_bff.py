@@ -36,7 +36,9 @@ if __name__ == "__main__":
     tokens = {"elder_a": os.environ.get("CAREHUB_I0_ELDER_A_TOKEN", ""), "family_a": os.environ.get("CAREHUB_I0_FAMILY_A_TOKEN", ""), "elder_b": os.environ.get("CAREHUB_I0_ELDER_B_TOKEN", ""), "family_b": os.environ.get("CAREHUB_I0_FAMILY_B_TOKEN", "")}
     port = int(os.environ.get("CAREHUB_I0_BFF_PORT", "8081"))
     origins = tuple(item for item in os.environ.get("CAREHUB_I0_ALLOWED_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if item)
-    bff = build(tokens); server = serve_bff_local(bff, port=port, allowed_origins=origins)
+    test_fault_status = int(os.environ["CAREHUB_I0_TEST_FAULT_STATUS"]) if os.environ.get("CAREHUB_I0_TEST_FAULT_STATUS") else None
+    test_delay_seconds = float(os.environ.get("CAREHUB_I0_TEST_DELAY_SECONDS", "0"))
+    bff = build(tokens); server = serve_bff_local(bff, port=port, allowed_origins=origins, test_fault_status=test_fault_status, test_delay_seconds=test_delay_seconds)
     print(f"I0 BFF: http://127.0.0.1:{port}; household:i0-a/user:elder-a", flush=True)
     try: server.serve_forever()
     except KeyboardInterrupt: pass

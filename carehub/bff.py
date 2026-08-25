@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+import time
 import json
 from urllib.parse import unquote
 from dataclasses import dataclass
@@ -231,7 +232,7 @@ class CareBff:
         return BffResponse(status, {"code": code, "message": message, "retryable": status in {429, 503}, "correlation_id": correlation_id}, {"X-Correlation-Id": correlation_id, "Cache-Control": "no-store"})
 
 
-def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = ()) -> type[BaseHTTPRequestHandler]:
+def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = (), test_fault_status: int | None = None, test_delay_seconds: float = 0) -> type[BaseHTTPRequestHandler]:
     """开发/演示 HTTP 适配器；只为显式允许的浏览器 Origin 返回 CORS 头。"""
     class Handler(BaseHTTPRequestHandler):
         def _cors(self) -> None:
@@ -249,7 +250,11 @@ def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = ()) -> 
             for key, value in response.headers.items(): self.send_header(key, value)
             self.send_header("Content-Type", response.headers.get("Content-Type", "application/json; charset=utf-8"))
             self.send_header("Content-Length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
-        def do_GET(self) -> None: self._write(bff.handle(method="GET", path=self.path, headers=dict(self.headers.items())))
+        def do_GET(self) -> None:
+            if self.path.endswith("/tasks") and test_fault_status:
+                self._write(bff._error(test_fault_status, "UPSTREAM_UNAVAILABLE", "合成下游暂不可用", f"bff-{uuid.uuid4()}")); return
+            if self.path.endswith("/tasks") and test_delay_seconds: time.sleep(test_delay_seconds)
+            self._write(bff.handle(method="GET", path=self.path, headers=dict(self.headers.items())))
         def do_OPTIONS(self) -> None:
             if self.headers.get("Origin") not in allowed_origins:
                 self.send_response(HTTPStatus.FORBIDDEN)
@@ -274,5 +279,5 @@ def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = ()) -> 
     return Handler
 
 
-def serve_bff_local(bff: CareBff, *, port: int = 8081, allowed_origins: tuple[str, ...] = ()) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer(("127.0.0.1", port), make_bff_handler(bff, allowed_origins=allowed_origins))
+def serve_bff_local(bff: CareBff, *, port: int = 8081, allowed_origins: tuple[str, ...] = (), test_fault_status: int | None = None, test_delay_seconds: float = 0) -> ThreadingHTTPServer:
+    return ThreadingHTTPServer(("127.0.0.1", port), make_bff_handler(bff, allowed_origins=allowed_origins, test_fault_status=test_fault_status, test_delay_seconds=test_delay_seconds))

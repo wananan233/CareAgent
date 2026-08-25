@@ -50,4 +50,12 @@ describe.sequential('Elder CoreApiAdapter real HTTP contract', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('OFFLINE');
   });
+  it('maps a real BFF 503 to UNAVAILABLE', async () => {
+    const bff = await startI0Bff({ status: 503 });
+    try { const result = await new CoreApiAdapter({ baseUrl: bff.baseUrl, token: i0Tokens.elderA, householdId: 'household:i0-a' }).getTasks('user:elder-a'); expect(result.ok).toBe(false); if (!result.ok) expect(result.error.code).toBe('UNAVAILABLE'); } finally { await bff.stop(); }
+  });
+  it('cancels a real delayed BFF request at the adapter timeout', async () => {
+    const bff = await startI0Bff({ delaySeconds: 1 });
+    try { const result = await new CoreApiAdapter({ baseUrl: bff.baseUrl, token: i0Tokens.elderA, householdId: 'household:i0-a', timeoutMs: 20 }).getTasks('user:elder-a'); expect(result.ok).toBe(false); if (!result.ok) expect(result.error.reason_code).toBe('UPSTREAM_TIMEOUT'); } finally { await bff.stop(); }
+  });
 });

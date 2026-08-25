@@ -2,7 +2,7 @@ import { makeError } from '@carehub/shared-contracts/elder';
 import type { AgentResponseV1, AlertViewV1, CareEventV1, CareRequestV1, CareTaskV1, ConsentScope, ConsentViewV1, DashboardViewV1, ErrorEnvelope, RequestReceiptV1, SubjectId } from '@carehub/shared-contracts/elder';
 import type { AdapterResult, ElderTerminalApi } from './adapter';
 
-export interface CoreApiAdapterOptions { baseUrl: string; token: string; householdId: string; fetcher?: typeof fetch }
+export interface CoreApiAdapterOptions { baseUrl: string; token: string; householdId: string; fetcher?: typeof fetch; timeoutMs?: number }
 type BffView = { items: unknown[] };
 const quality = (v: unknown): 'VALID' | 'LOW' | 'CONFLICT' | 'UNKNOWN' => v === 'LOW' ? 'LOW' : v === 'CONFLICT' ? 'CONFLICT' : v === 'UNKNOWN' ? 'UNKNOWN' : 'VALID';
 const sourceRefs = (v: unknown, at: string) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []).map((id) => ({ type: 'SIMULATOR' as const, label: 'CareHub 合成事件', ref_id: id, kind: 'care_event', occurred_at: at }));
@@ -14,7 +14,9 @@ export class CoreApiAdapter implements ElderTerminalApi {
   private path(subjectId: SubjectId, suffix: string): string { return `/v1/households/${encodeURIComponent(this.options.householdId)}/subjects/${encodeURIComponent(subjectId)}/${suffix}`; }
   private async request<T>(path: string, init: RequestInit = {}): Promise<AdapterResult<T>> {
     try {
-      const response = await (this.options.fetcher ?? fetch)(`${this.options.baseUrl.replace(/\/$/, '')}${path}`, { ...init, headers: { Accept: 'application/json', Authorization: `Bearer ${this.options.token}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers } });
+      const controller = new AbortController(); const timeout = this.options.timeoutMs ? setTimeout(() => controller.abort(), this.options.timeoutMs) : undefined;
+      const response = await (this.options.fetcher ?? fetch)(`${this.options.baseUrl.replace(/\/$/, '')}${path}`, { ...init, signal: controller.signal, headers: { Accept: 'application/json', Authorization: `Bearer ${this.options.token}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers } });
+      if (timeout) clearTimeout(timeout);
       const body: unknown = await response.json();
       if (!response.ok) {
         const error = body as Partial<ErrorEnvelope>;
@@ -32,7 +34,7 @@ export class CoreApiAdapter implements ElderTerminalApi {
         return { ok: false, error: makeError(code, reason, error.message ?? '服务请求失败', Boolean(error.retryable)) };
       }
       return { ok: true, data: body as T };
-    } catch { return { ok: false, error: makeError('OFFLINE', 'NETWORK_OFFLINE', '无法连接照护服务', true) }; }
+    } catch (error) { return typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError' ? { ok: false, error: makeError('UNAVAILABLE', 'UPSTREAM_TIMEOUT', '服务响应超时', true) } : { ok: false, error: makeError('OFFLINE', 'NETWORK_OFFLINE', '无法连接照护服务', true) }; }
   }
   async getTasks(subjectId: SubjectId): Promise<AdapterResult<CareTaskV1[]>> {
     const result = await this.request<BffView>(this.path(subjectId, 'tasks')); if (!result.ok) return result;
