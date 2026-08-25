@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "phase": "B0",
-  "b0_status": "BLOCKED",
-  "baseline_commit": "99b7dbad0e5f04ed176f131ca6406f2dafe882c4",
+  "b0_status": "READY_FOR_REVIEW",
+  "baseline_commit": "2146419721007d6c65f96d2634a87d997cd4bdc0",
   "baseline_branch": "main",
-  "canonical_repository": null,
+  "canonical_repository": "https://github.com/wananan233/CareAgent.git (main)",
   "repository": "https://github.com/wananan233/CareAgent.git",
   "runtime": {
     "python": "3.11 (CI target)",
@@ -20,9 +20,13 @@
     "python_tests": "python -m pytest -q",
     "family_unit": "pnpm --filter @carehub/family-pwa test",
     "family_build": "pnpm --filter @carehub/family-pwa build",
-    "family_e2e": "pnpm --filter @carehub/family-pwa test:e2e"
+    "family_e2e": "pnpm --filter @carehub/family-pwa test:e2e",
+    "elder_typecheck": "pnpm --filter @carehub/elder-terminal typecheck",
+    "elder_unit": "pnpm --filter @carehub/elder-terminal test",
+    "elder_build": "pnpm --filter @carehub/elder-terminal build",
+    "elder_e2e": "pnpm --filter @carehub/elder-terminal test:e2e"
   },
-  "blockers": ["D-B0-01", "D-B0-02"],
+  "blockers": [],
   "artifacts": {
     "family_pwa": "apps/family-pwa/dist",
     "family_e2e": "apps/family-pwa/test-results",

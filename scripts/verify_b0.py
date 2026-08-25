@@ -1,4 +1,4 @@
-"""B0 baseline checks that must stay explicit until the elder terminal arrives."""
+"""B0 baseline checks for the canonical dual-terminal workspace."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def main() -> int:
         print("B0 verification failed; missing or invalid:")
         print("\n".join(f"- {path}" for path in missing))
         if elder_missing:
-            print("Elder-terminal source is a B0 blocker; see docs/B0_BLOCKERS.md.")
+            print("Elder-terminal source is required for this B0 gate; see docs/B0_BLOCKERS.md.")
         return 1
 
     print("B0 file-presence checks passed.")

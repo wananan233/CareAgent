@@ -1,11 +1,11 @@
 # B0 Blocking Evidence and Decision Register
 
-Status at 2026-08-22: **BLOCKED**. This register intentionally distinguishes missing inputs from completed code.
+Status at 2026-08-25: **READY FOR REVIEW**. This register intentionally distinguishes missing inputs from completed code.
 
 | ID | Owner | Status | Required resolution | Blocks |
 | --- | --- | --- | --- | --- |
-| D-B0-01 | 项目负责人 | OPEN | Provide the elderly-terminal repository URL, branch and immutable commit (or add its source under `apps/elder-terminal` with lockfile, tests and README). | B0, E0 |
-| D-B0-02 | 技术负责人 | OPEN | Select the canonical single/multi-repository model and release branch. | B0 |
+| D-B0-01 | 项目负责人 | RESOLVED | 老人端已随 GitHub `main` 的提交 `2146419721007d6c65f96d2634a87d997cd4bdc0` 交付至 `apps/elder-terminal`，包含 lockfile、README、测试和构建命令。 | — |
+| D-B0-02 | 技术负责人 | RESOLVED | GitHub `https://github.com/wananan233/CareAgent.git` 的 `main` 确认为当前单仓库规范主线。 | — |
 | D-G0-01 | 医疗 / 产品 | OPEN | Approve medication deferral and escalation rules. | Real medication integration |
 | D-G0-02 | 安全 / 产品 | OPEN | Approve immobility and no-response escalation rules. | Real alert integration |
 | D-G0-03 | Medication owner | OPEN | Approve medication-evidence conflict matrix. | Real medication evidence |
@@ -20,6 +20,6 @@ The elderly-terminal handoff must include source code, lockfile, automated tests
 
 ## B0 review record
 
-- Completed locally: fixed direct dependency versions; CI now covers Python contracts/tests and the tracked family PWA; D: bootstrap/verification scripts; baseline manifest; decision register.
-- Not complete: source-control commit/tag of the existing dirty worktree, elderly-terminal handoff, canonical repository decision, and a green CI run containing the elderly-terminal checks.
-- Rollback: use the baseline commit in `BASELINE.md` in a separate clean checkout. Preserve this worktree.
+- Completed locally: fixed direct dependency versions; D: bootstrap/verification scripts; baseline manifest; canonical monorepo confirmation; Python contracts/tests; family and elderly terminal unit tests; elderly terminal typecheck and production build.
+- Remaining review evidence: a green GitHub Actions run on the canonical commit, including both terminals' E2E suites.
+- Rollback: use `baseline.json` 的 `baseline_commit` 在独立干净检出中回退；保留当前工作区。

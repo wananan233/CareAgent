@@ -45,4 +45,12 @@ jobs:
           pnpm --filter @carehub/family-pwa exec playwright install --with-deps chromium
           pnpm --filter @carehub/family-pwa test:e2e
       - name: 老人端接管门禁
-        run: python -m scripts.verify_b0 --require-elder-terminal
+        run: |
+          python -m scripts.verify_b0 --require-elder-terminal
+          pnpm --filter @carehub/elder-terminal typecheck
+          pnpm --filter @carehub/elder-terminal test
+          pnpm --filter @carehub/elder-terminal build
+      - name: 老人端端到端测试
+        run: |
+          pnpm --filter @carehub/elder-terminal exec playwright install --with-deps chromium
+          pnpm --filter @carehub/elder-terminal test:e2e
