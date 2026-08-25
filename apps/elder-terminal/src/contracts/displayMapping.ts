@@ -73,6 +73,7 @@ export function loadStateFor(reasonCode: ReasonCode | null): LoadStateView {
         description: '网络恢复后将自动更新，目前显示的是最后可信数据。',
       };
     case 'SUBJECT_MISMATCH':
+    case 'FORBIDDEN':
     case 'CONSENT_REVOKED':
     case 'CONSENT_EXPIRED':
       return {

@@ -29,15 +29,19 @@ export class CoreApiAdapter implements CoreAdapter {
     const view = await this.request<{ items: AlertViewV1[] }>(`/v1/households/${encodeURIComponent(this.options.householdId)}/subjects/${encodeURIComponent(subjectId)}/alerts`)
     return view.items
   }
-  async acknowledgeAlert(subjectId: string, alertId: string, command: RequestCommandV1): Promise<RequestReceiptV1> { return this.request(`/v1/users/${encodeURIComponent(subjectId)}/requests`, { method: 'POST', body: JSON.stringify({ ...command, resource_type: 'ALERT', resource_id: alertId }) }) }
+  private path(subjectId: string, suffix: string): string { return `/v1/households/${encodeURIComponent(this.options.householdId)}/subjects/${encodeURIComponent(subjectId)}/${suffix}` }
+  async acknowledgeAlert(subjectId: string, alertId: string, command: RequestCommandV1): Promise<RequestReceiptV1> { return this.request(this.path(subjectId, 'requests'), { method: 'POST', body: JSON.stringify({ ...command, action: 'ACKNOWLEDGE_ALERT', resource_id: alertId }) }) }
   async getTasks(subjectId: string): Promise<CareTaskV1[]> {
     const view = await this.request<{ items: CareTaskV1[] }>(`/v1/households/${encodeURIComponent(this.options.householdId)}/subjects/${encodeURIComponent(subjectId)}/tasks`)
     return view.items
   }
-  async createCareRequest(subjectId: string, template: 'SEND_CARE_NOTE' | 'REMINDER_PREFERENCE', idempotencyKey: string): Promise<CareRequestV1> { return this.request(`/v1/users/${encodeURIComponent(subjectId)}/requests`, { method: 'POST', body: JSON.stringify({ template, idempotency_key: idempotencyKey }) }) }
+  async createCareRequest(subjectId: string, template: 'SEND_CARE_NOTE' | 'REMINDER_PREFERENCE', idempotencyKey: string): Promise<CareRequestV1> { return this.request(this.path(subjectId, 'requests'), { method: 'POST', body: JSON.stringify({ command_id: crypto.randomUUID(), idempotency_key: idempotencyKey, expected_version: 1, action: 'CREATE_CARE_REQUEST', template }) }) }
   async getReport(subjectId: string, mode: 'normal' | 'fallback'): Promise<AgentResponseV1> {
     if (mode === 'fallback') throw new Error('SIMULATED_FALLBACK_UNAVAILABLE')
     return this.request(`/v1/households/${encodeURIComponent(this.options.householdId)}/subjects/${encodeURIComponent(subjectId)}/report`)
   }
-  async revokeConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1> { return this.request(`/v1/users/${encodeURIComponent(subjectId)}/consents/${encodeURIComponent(scope)}:revoke`, { method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }) }) }
+  async revokeConsent(subjectId: string, scope: string, expectedVersion: number): Promise<ConsentRevokeReceiptV1> {
+    const body = await this.request<{ consent: { scope: string; status: 'REVOKED'; revoked_at: string; version: number } }>(this.path(subjectId, `consents/${encodeURIComponent(scope)}:revoke`), { method: 'POST', body: JSON.stringify({ command_id: crypto.randomUUID(), idempotency_key: crypto.randomUUID(), expected_version: expectedVersion }) })
+    return body.consent
+  }
 }
