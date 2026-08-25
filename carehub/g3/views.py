@@ -25,7 +25,7 @@ class AuthorizedProjectionReader:
         fields = {
             "alerts": ("alert_id", "kind", "safety_level", "status", "occurred_at", "version", "quality", "source_refs"),
             "tasks": ("task_ref", "status", "evidence_state", "scheduled_at", "version", "quality", "source_refs"),
-            "timeline": ("event_id", "event_type", "occurred_at"),
+            "timeline": ("event_id", "event_type", "occurred_at", "quality", "observation"),
         }[kind]
         return {"items": [{field: item[field] for field in fields if field in item} for item in values],
                 "reason_code": "ALLOW", "allowed_actions": list(decision.allowed_actions),

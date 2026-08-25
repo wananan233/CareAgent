@@ -25,7 +25,7 @@ class Projections:
     def apply(self, event: dict[str, Any]) -> None:
         payload = event["payload"]
         event_type = payload["event_type"]
-        self.timeline.append({"event_id": event["event_id"], "event_type": event_type, "occurred_at": event["occurred_at"], "tenant_id": event["tenant_id"], "subject_id": event["subject_id"], "household_id": event["household_id"]})
+        self.timeline.append({"event_id": event["event_id"], "event_type": event_type, "occurred_at": event["occurred_at"], "quality": event["quality"], "observation": payload.get("observation"), "tenant_id": event["tenant_id"], "subject_id": event["subject_id"], "household_id": event["household_id"]})
         if event_type == "ALERT_RAISED":
             self.alerts[self._key(event, payload["alert_id"])] = {"status": "ACTIVE", "occurred_at": event["occurred_at"], "version": 1, "quality": event["quality"], "source_refs": [event["event_id"]], **payload}
         elif event_type == "ALERT_RESOLVED":

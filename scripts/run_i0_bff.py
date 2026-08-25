@@ -9,6 +9,7 @@ from carehub.core.scenario import ScenarioService
 from carehub.core.service import CareCore
 from carehub.g2 import StaticTokenAuthenticator
 from carehub.g3 import ConsentLedger
+from carehub.core.events import new_event
 
 TENANT = "tenant:i0-demo"
 HOUSEHOLDS = (("household:i0-a", "user:elder-a", "user:family-a"), ("household:i0-b", "user:elder-b", "user:family-b"))
@@ -29,6 +30,8 @@ def build(tokens: Mapping[str, str]) -> CareBff:
         scenario = ScenarioService(core)
         scenario.run(scenario="DOSE", seed=index, tenant_id=TENANT, household_id=household, subject_id=elder)
         scenario.run(scenario="SAFETY", seed=index, tenant_id=TENANT, household_id=household, subject_id=elder)
+        if os.environ.get("CAREHUB_I0_TEST_SEED") == "LOW" and index == 1:
+            core.ingest(new_event(tenant_id=TENANT, household_id=household, subject_id=elder, aggregate="device:low-01", sequence=1, event_type="FALL_DETECTED", quality="LOW", payload={"observation": "LOW_CONFIDENCE_OR_UNCONFIRMED"}, event_id="gsc-03-low-activity-01"))
     return CareBff(core=core, authenticator=StaticTokenAuthenticator({tokens[name]: actor for name, actor in required.items()}, tenant_id=TENANT))
 
 

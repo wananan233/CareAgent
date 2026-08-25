@@ -60,7 +60,8 @@ export class CoreApiAdapter implements ElderTerminalApi {
       const raw = item && typeof item === 'object' ? item as Record<string, unknown> : null;
       if (!raw || typeof raw.event_id !== 'string' || typeof raw.occurred_at !== 'string') return null;
       const event_type = raw.event_type === 'ALERT_RAISED' ? 'SMOKE_GAS' : raw.event_type === 'MEDICATION_DUE' ? 'MEDICATION_DUE' : 'LOW_QUALITY_ACTIVITY';
-      return { event_id: raw.event_id, event_type, occurred_at: raw.occurred_at, source: { type: 'SIMULATOR', simulator_id: 'carehub-bff' }, quality: { status: 'VALID' }, source_refs: [{ type: 'SIMULATOR', ref_id: raw.event_id, kind: 'care_event', label: 'CareHub 合成事件', occurred_at: raw.occurred_at }] };
+      const qualityStatus = raw.quality === 'LOW' ? 'LOW' : raw.quality === 'CONFLICT' ? 'CONFLICT' : 'VALID';
+      return { event_id: raw.event_id, event_type, occurred_at: raw.occurred_at, source: { type: 'SIMULATOR', simulator_id: 'carehub-bff' }, quality: { status: qualityStatus, ...(typeof raw.observation === 'string' ? { reason: raw.observation } : {}) }, source_refs: [{ type: 'SIMULATOR', ref_id: raw.event_id, kind: 'care_event', label: 'CareHub 合成事件', occurred_at: raw.occurred_at }] };
     });
     return events.some((item) => item === null) ? { ok: false, error: makeError('SCHEMA_INVALID', 'SCHEMA_INVALID', '时间线响应不符合契约', false) } : { ok: true, data: events as CareEventV1[] };
   }

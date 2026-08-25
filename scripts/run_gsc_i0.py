@@ -49,7 +49,8 @@ def main() -> int:
     family_after_status, family_after, _ = call(FAMILY, "GET", f"{scoped}/timeline")
     elder_after_status, elder_after, _ = call(ELDER, "GET", f"{scoped}/dashboard")
     scenarios["GSC-05"] = {"status": "PASS" if family_status == 200 and relinquish_status == 200 and family_after_status == 403 and elder_after_status == 200 else "FAIL", "relinquish_status": relinquish_status, "family_after_status": family_after_status, "elder_after_status": elder_after_status, "correlation_id": relinquished.get("correlation_id", relinquish_correlation), "audit_id": relinquished.get("consent", {}).get("consent_id", "N/A")}
-    scenarios["GSC-03"] = {"status": "NOT RUN", "reason": "本轮未注入低质量/冲突观察专用合成事件。"}
+    low_items = [item for item in reads["timeline"]["body"].get("items", []) if item.get("event_id") == "gsc-03-low-activity-01" and item.get("quality") == "LOW"]
+    scenarios["GSC-03"] = {"status": "PASS" if low_items else "NOT RUN", "event_id": "gsc-03-low-activity-01" if low_items else "N/A", "agent_run_id": reads["report"]["body"].get("agent_run_id", "N/A"), "evidence": "LOW quality is present in authorized timeline; agent context remains source-bound." if low_items else "LOW seed not present."}
     scenarios["GSC-06"] = {"status": "NOT RUN", "reason": "本轮未停止/恢复 BFF，避免把 HTTP Gate 证据冒充离线恢复场景。"}
     if FAMILY_B:
         other = f"/v1/households/household%3Ai0-b/subjects/user%3Aelder-b/tasks"
