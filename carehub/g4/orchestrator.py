@@ -15,7 +15,7 @@ class AgentOrchestrator:
         decision = self.pdp.authorize(context, PolicyRequest(household_id, subject_id, "read_authorized_view", purpose, "SENSITIVE", "TERMINAL", "agent_view"))
         if not decision.allowed: return {"fallback": "TEMPLATE_FALLBACK", "reason_code": "POLICY_DENIED", "facts": []}
         run_id = f"run-{uuid.uuid4()}"; now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        self.store.create_agent_run({"agent_run_id":run_id,"subject_id":subject_id,"purpose":purpose,"trigger_event_ids":[],"channel":"TERMINAL","status":"EXECUTING","context_snapshot_id":None,"plan_id":None,"reason_code":None,"correlation_id":f"agent-{uuid.uuid4()}","created_at":now,"updated_at":now,"version":1,"tenant_id":context.tenant_id,"household_id":household_id})
+        self.store.create_agent_run({"agent_run_id":run_id,"subject_id":subject_id,"purpose":purpose,"trigger_event_ids":[],"channel":"TERMINAL","status":"EXECUTING","context_snapshot_id":None,"plan_id":None,"reason_code":None,"correlation_id":f"agent-{uuid.uuid4()}","created_at":now,"updated_at":now,"version":1,"tenant_id":context.tenant_id,"household_id":household_id,"consent_id":decision.consent_id,"consent_version":decision.consent_version,"policy_version":decision.policy_version,"source_refs":sorted({ref for fact in minimal_context.get("facts", []) if isinstance(fact, dict) for ref in fact.get("source_refs", []) if isinstance(ref, str)})})
         result = self.gateway.generate(purpose=purpose, minimal_context=minimal_context)
         run = self.store.agent_run(run_id)
         self.store.transition_agent_run(run_id, run["version"], status="COMPLETED", reason_code=result["reason_code"], updated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))

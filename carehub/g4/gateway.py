@@ -3,13 +3,15 @@ from __future__ import annotations
 
 import json
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol
 
 
 ALLOWED_PURPOSES = frozenset({"TODAY_STATUS", "DAILY_SUMMARY"})
 FORBIDDEN_TERMS = ("诊断", "处方", "剂量", "加药", "减药", "停药", "已吞服", "已服药", "立即拨打", "触发SOS", "调用工具")
-PII_PATTERN = re.compile(r"(?:1[3-9]\d{9}|\b\d{15,18}[0-9Xx]\b|(?:姓名|电话|地址)\s*[:：])")
+PII_PATTERN = re.compile(r"(?:1[3-9]\d{9}|(?:0\d{2,3}-?)?\d{7,8}|[\w.+-]+@[\w-]+\.[\w.-]+|\b\d{15,18}[0-9Xx]\b|(?:姓名|电话|地址|家庭成员|家属|住址|未授权正文|原始病历)\s*[:：])")
 TEMPLATES = {
     "TODAY_STATUS": "当前可确认的信息如下，请按页面中的来源和时间查看详情。",
     "DAILY_SUMMARY": "今日摘要暂时无法生成，请以已确认的时间线记录为准。",
@@ -43,16 +45,35 @@ class FakeProvider:
 class ModelGateway:
     """Provider 仅能看到去标识化事实，输出永远先过 schema 与安全扫描。"""
 
-    def __init__(self, provider: Provider | None = None) -> None:
+    def __init__(self, provider: Provider | None = None, *, cancelled: callable | None = None, budget_seconds: float = 2.0) -> None:
         self.provider = provider or FakeProvider()
+        self.cancelled, self.budget_seconds = cancelled or (lambda: False), budget_seconds
 
     def generate(self, *, purpose: str, minimal_context: Mapping[str, Any]) -> dict[str, Any]:
         if purpose not in ALLOWED_PURPOSES:
             return self._fallback(purpose, "PURPOSE_DENIED", [])
         try:
             facts = self._minimize(minimal_context)
-            raw = self.provider.generate(purpose=purpose, facts=facts)
+            started = time.monotonic()
+            if self.cancelled(): raise ModelGatewayError("CANCELLED")
+            try:
+                executor = ThreadPoolExecutor(max_workers=1)
+                future = executor.submit(self.provider.generate, purpose=purpose, facts=facts)
+                try:
+                    raw = future.result(timeout=max(0.0, self.budget_seconds - (time.monotonic() - started)))
+                finally:
+                    executor.shutdown(wait=False, cancel_futures=True)
+            except (TimeoutError, FutureTimeout, OSError) as error:
+                if self.cancelled() or time.monotonic() - started >= self.budget_seconds: raise ModelGatewayError("CANCELLED" if self.cancelled() else "BUDGET_EXCEEDED") from error
+                executor = ThreadPoolExecutor(max_workers=1)
+                future = executor.submit(self.provider.generate, purpose=purpose, facts=facts)
+                try:
+                    raw = future.result(timeout=max(0.0, self.budget_seconds - (time.monotonic() - started)))
+                finally:
+                    executor.shutdown(wait=False, cancel_futures=True)
+            if self.cancelled() or time.monotonic() - started > self.budget_seconds: raise ModelGatewayError("CANCELLED" if self.cancelled() else "BUDGET_EXCEEDED")
             payload = self._parse(raw, facts)
+            if self.cancelled(): raise ModelGatewayError("CANCELLED")
             if any(term in payload["message"] for term in FORBIDDEN_TERMS):
                 raise ModelGatewayError("SAFETY_SCAN_BLOCKED")
             return {"message": payload["message"], "facts": [facts[index] for index in payload["fact_indexes"]],

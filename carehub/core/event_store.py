@@ -207,6 +207,10 @@ class EventStore:
         for column in ("policy_version", "consent_version", "correlation_id"):
             if column not in audit_columns:
                 self.connection.execute(f"ALTER TABLE audit_entry ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
+        agent_columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(agent_run)")}
+        for column, default in {"consent_id": "", "consent_version": "-1", "policy_version": "", "source_refs_json": "[]"}.items():
+            if column not in agent_columns:
+                self.connection.execute(f"ALTER TABLE agent_run ADD COLUMN {column} TEXT NOT NULL DEFAULT '{default}'")
         task_columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(care_task)")}
         if "business_task_id" not in task_columns:
             self.connection.execute("ALTER TABLE care_task ADD COLUMN business_task_id TEXT")
@@ -382,10 +386,10 @@ class EventStore:
                 return False
             self.connection.execute(
                 """INSERT INTO agent_run(agent_run_id, subject_id, purpose, trigger_event_ids_json, channel, status,
-                   context_snapshot_id, plan_id, reason_code, correlation_id, created_at, updated_at, version, tenant_id, household_id)
+                   context_snapshot_id, plan_id, reason_code, correlation_id, created_at, updated_at, version, tenant_id, household_id, consent_id, consent_version, policy_version, source_refs_json)
                    VALUES(:agent_run_id,:subject_id,:purpose,:trigger_event_ids_json,:channel,:status,:context_snapshot_id,:plan_id,
-                   :reason_code,:correlation_id,:created_at,:updated_at,:version,:tenant_id,:household_id)""",
-                {**run, "tenant_id": run.get("tenant_id", "tenant:synthetic"), "household_id": run.get("household_id", "household:synthetic-home"), "trigger_event_ids_json": json.dumps(run["trigger_event_ids"], ensure_ascii=False)},
+                   :reason_code,:correlation_id,:created_at,:updated_at,:version,:tenant_id,:household_id,:consent_id,:consent_version,:policy_version,:source_refs_json)""",
+                {**run, "tenant_id": run.get("tenant_id", "tenant:synthetic"), "household_id": run.get("household_id", "household:synthetic-home"), "trigger_event_ids_json": json.dumps(run["trigger_event_ids"], ensure_ascii=False), "consent_id": run.get("consent_id", ""), "consent_version": str(run.get("consent_version", -1)), "policy_version": run.get("policy_version", ""), "source_refs_json": json.dumps(run.get("source_refs", []), ensure_ascii=False)},
             )
             return True
 
@@ -394,7 +398,7 @@ class EventStore:
             row = self.connection.execute("SELECT * FROM agent_run WHERE agent_run_id=?", (agent_run_id,)).fetchone()
         if not row:
             return None
-        value = dict(row); value["trigger_event_ids"] = json.loads(value.pop("trigger_event_ids_json")); return value
+        value = dict(row); value["trigger_event_ids"] = json.loads(value.pop("trigger_event_ids_json")); value["source_refs"] = json.loads(value.pop("source_refs_json", "[]")); return value
 
     def agent_run_for_scope(self, agent_run_id: str, *, tenant_id: str, household_id: str, subject_id: str) -> dict[str, Any] | None:
         value = self.agent_run(agent_run_id)

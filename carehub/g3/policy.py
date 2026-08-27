@@ -37,6 +37,7 @@ class PolicyDecision:
     reason: str
     policy_version: str = "v1"
     consent_version: int = -1
+    consent_id: str = ""
     resource_version: str = ""
     allowed_actions: tuple[str, ...] = ()
 
@@ -80,13 +81,13 @@ class ServerSidePDP:
         consent = self.ledger.active_consent(access)
         if not consent:
             return self._audit(context, request, False, "CONSENT_OR_ABAC_DENIED")
-        return self._audit(context, request, True, "ALLOW", consent_version=int(consent["version"]), allowed_actions=self.role_capabilities.get(role, frozenset()))
+        return self._audit(context, request, True, "ALLOW", consent_version=int(consent["version"]), consent_id=str(consent["consent_id"]), allowed_actions=self.role_capabilities.get(role, frozenset()))
 
-    def _audit(self, context: AuthContext, request: PolicyRequest, allowed: bool, reason: str, consent_version: int = -1, allowed_actions: frozenset[str] = frozenset()) -> PolicyDecision:
+    def _audit(self, context: AuthContext, request: PolicyRequest, allowed: bool, reason: str, consent_version: int = -1, consent_id: str = "", allowed_actions: frozenset[str] = frozenset()) -> PolicyDecision:
         self.store.record_audit(actor=context.actor_id, capability=request.capability,
                                 decision="ALLOW" if allowed else "DENY", reason=reason,
                                 resource=f"subject:{request.subject_id}", tenant_id=context.tenant_id,
                                 household_id=request.household_id, subject_id=request.subject_id,
                                 policy_version="v1", consent_version=str(consent_version), correlation_id=request.correlation_id)
-        return PolicyDecision(allowed, reason, consent_version=consent_version, resource_version=request.resource_version,
+        return PolicyDecision(allowed, reason, consent_version=consent_version, consent_id=consent_id, resource_version=request.resource_version,
                               allowed_actions=tuple(sorted(allowed_actions)) if allowed else ())

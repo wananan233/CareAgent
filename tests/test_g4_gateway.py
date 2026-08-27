@@ -105,6 +105,53 @@ def test_dlp_and_authorized_orchestrator(tmp_path):
     ledger.activate(consent["consent_id"], actor="user:alice", expected_version=1)
     result = AgentOrchestrator(store, pdp).run(context=AuthContext("user:alice", "tenant:a"), household_id="household:a", subject_id="user:alice", purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务状态 UNKNOWN", "source_refs": ["evt"]}]})
     assert result["fallback"] == "NONE"
-    assert store.agent_run(result["agent_run_id"])["status"] == "COMPLETED"
+    frozen = store.agent_run(result["agent_run_id"])
+    assert frozen and frozen["status"] == "COMPLETED"
+    assert frozen["consent_id"] == consent["consent_id"]
+    assert frozen["consent_version"] == str(ledger.get(consent["consent_id"])["version"])
+    assert frozen["policy_version"] == "v1" and frozen["source_refs"] == ["evt"]
+    ledger.revoke(consent["consent_id"], actor="user:alice", expected_version=ledger.get(consent["consent_id"])["version"])
+    assert AgentOrchestrator(store, pdp).run(context=AuthContext("user:alice", "tenant:a"), household_id="household:a", subject_id="user:alice", purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务状态 UNKNOWN", "source_refs": ["evt"]}]})["reason_code"] == "POLICY_DENIED"
+    assert store.agent_run(result["agent_run_id"])["consent_id"] == consent["consent_id"]
     assert AgentOrchestrator(store, pdp).run(context=AuthContext("user:alice", "tenant:a"), household_id="household:a", subject_id="user:alice", purpose="CHAT", minimal_context={"facts": []})["reason_code"] == "PURPOSE_DENIED"
     store.close()
+
+def test_gateway_cancel_retry_budget_and_dlp_zero_provider_leakage():
+    class Flaky:
+        version = "flaky"
+        def __init__(self): self.calls = 0
+        def generate(self, **kwargs):
+            self.calls += 1
+            if self.calls == 1: raise TimeoutError("transient")
+            return json.dumps({"message": "正常", "fact_indexes": [0]})
+    flaky = Flaky()
+    assert ModelGateway(flaky).generate(purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]})["fallback"] == "NONE"
+    assert flaky.calls == 2
+
+    class Capture:
+        version = "capture"
+        def __init__(self): self.calls = 0
+        def generate(self, **kwargs): self.calls += 1; return json.dumps({"message": "正常", "fact_indexes": []})
+    for text in ("邮箱 a@carehub.example", "座机 010-12345678", "姓名：王阿姨", "地址：北京路1号", "家庭成员：女儿", "备注 user:alice 电话13800000000", "未授权正文：原始病历"):
+        capture = Capture()
+        result = ModelGateway(capture).generate(purpose="TODAY_STATUS", minimal_context={"facts": [{"text": text, "source_refs": ["evt"]}]})
+        assert result["fallback"] == "TEMPLATE_FALLBACK" and capture.calls == 0
+    cancelled = Capture()
+    assert ModelGateway(cancelled, cancelled=lambda: True).generate(purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]})["reason_code"] == "CANCELLED"
+    assert cancelled.calls == 0
+
+def test_blocking_provider_returns_within_budget_without_retry_or_state_write():
+    import threading, time
+    class Blocking:
+        version = "blocking"
+        def __init__(self): self.calls = 0
+        def generate(self, **kwargs):
+            self.calls += 1; time.sleep(.35)
+            return json.dumps({"message": "晚到", "fact_indexes": []})
+    provider = Blocking(); started = time.monotonic()
+    result = ModelGateway(provider, budget_seconds=.05).generate(purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]})
+    assert time.monotonic() - started < .15
+    assert result["fallback"] == "TEMPLATE_FALLBACK" and provider.calls == 1
+    baseline = len([t for t in threading.enumerate() if t.name.startswith("ThreadPoolExecutor")])
+    for _ in range(3): ModelGateway(Blocking(), budget_seconds=.02).generate(purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]})
+    assert len([t for t in threading.enumerate() if t.name.startswith("ThreadPoolExecutor")]) <= baseline + 3
