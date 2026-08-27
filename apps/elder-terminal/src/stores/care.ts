@@ -16,7 +16,7 @@ import type {
   RequestReceiptV1,
   SubjectId,
 } from '@carehub/shared-contracts/elder';
-import type { AdapterResult } from '@/services/adapter';
+import type { AdapterResult, DevelopmentFaultInjection, ElderTerminalApi } from '@/services/adapter';
 import { createElderTerminalApi, runtimeSubjectId } from '@/services/runtime';
 import { useAppStore } from '@/stores/app';
 import {
@@ -33,7 +33,8 @@ import {
 export const useCareStore = defineStore('care', {
   state: () => ({
     subjectId: runtimeSubjectId as SubjectId,
-    api: createElderTerminalApi(),
+    // 故障注入仅由开发/测试 Mock 提供；正式运行时绝不会调用这些可选能力。
+    api: createElderTerminalApi() as ElderTerminalApi & DevelopmentFaultInjection,
     dashboard: null as DashboardViewV1 | null,
     tasks: [] as CareTaskV1[],
     timeline: [] as CareEventV1[],

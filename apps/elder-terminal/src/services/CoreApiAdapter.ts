@@ -80,6 +80,4 @@ export class CoreApiAdapter implements ElderTerminalApi {
     const result = await this.request<{ consent: ConsentViewV1 }>(this.path(subjectId, `consents/${encodeURIComponent(scope)}:revoke`), { method: 'POST', body: JSON.stringify({ command_id: crypto.randomUUID(), idempotency_key: crypto.randomUUID(), expected_version: this.consentVersions.get(`${subjectId}:${scope}`) ?? 1 }) });
     return result.ok ? { ok: true, data: result.data.consent } : result;
   }
-  setFault(_fault: 'none' | 'offline' | 'denied' | 'failed' | 'timeout'): void { /* 真实 BFF 不接受客户端故障注入。 */ }
-  setAgentFault(_fault: 'none' | 'timeout' | 'out_of_bounds' | 'no_source'): void { /* 真实 BFF 不接受客户端模型注入。 */ }
 }

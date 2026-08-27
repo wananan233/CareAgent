@@ -15,7 +15,7 @@ import type {
   RequestReceiptV1,
   SubjectId,
 } from '@carehub/shared-contracts/elder';
-import type { AdapterErr, AdapterResult, ElderTerminalApi } from './adapter';
+import type { AdapterErr, AdapterResult, DevelopmentFaultInjection, ElderTerminalApi } from './adapter';
 import {
   DEMO_SUBJECT_ID,
   fixtureAgentFallback,
@@ -39,7 +39,7 @@ export interface MockCoreAdapterOptions {
 }
 
 /** 纯合成数据的适配器实现，用于在 C0-C4 就绪前完成所有页面与验收。 */
-export class MockCoreAdapter implements ElderTerminalApi {
+export class MockCoreAdapter implements ElderTerminalApi, DevelopmentFaultInjection {
   private fault: MockFault;
   private agentFault: AgentFault;
   private readonly subjectId: SubjectId;
