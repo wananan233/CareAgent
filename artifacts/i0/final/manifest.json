@@ -1,0 +1,21 @@
+{
+  "gate": "I0 final regression",
+  "status": "PASS",
+  "evidence": {
+    "gsc_repeat": "artifacts/i0/repeat/repeat-a0207a8f99.json",
+    "same_port_control": "artifacts/i0/gsc-06/gsc-06-16eaa37b6a/evidence.json",
+    "elder_outage_test": "apps/elder-terminal/tests/unit/outageRecovery.real.test.ts",
+    "family_outage_test": "apps/family-pwa/tests/outage-recovery.real.spec.ts",
+    "mock_bundle_scan": "Elder/Family production dist: forbidden markers 0"
+  },
+  "regression": {
+    "python": "317 passed, 3 skipped",
+    "elder": "108 passed",
+    "family": "40 passed"
+  },
+  "safety": {
+    "command_auto_replay": 0,
+    "duplicate_side_effects": 0,
+    "mock_production_markers": 0
+  }
+}

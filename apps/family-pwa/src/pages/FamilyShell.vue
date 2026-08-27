@@ -8,11 +8,28 @@ import { useUiStore } from '@/stores/ui'
 const dashboard = ref<DashboardV1 | null>(null)
 const loading = ref(true)
 const ui = useUiStore()
-onMounted(async () => { dashboard.value = await coreAdapter.getDashboard(currentSubjectId); ui.markTrusted(dashboard.value.last_updated_at); loading.value = false })
+let recoveryTimer: ReturnType<typeof setTimeout> | undefined
+let syncTimer: ReturnType<typeof setTimeout> | undefined
+async function loadDashboard() {
+  try {
+    const next = await coreAdapter.getDashboard(currentSubjectId)
+    dashboard.value = next
+    ui.markTrusted(next.last_updated_at)
+    ui.setNetwork(false)
+    if (recoveryTimer) clearTimeout(recoveryTimer)
+    recoveryTimer = undefined
+    if (!syncTimer) syncTimer = setTimeout(() => { syncTimer = undefined; void loadDashboard() }, 1_000)
+  } catch {
+    // 保留最后可信快照；仅重试读取，绝不自动重放写命令。
+    ui.setNetwork(true)
+    if (!recoveryTimer) recoveryTimer = setTimeout(() => { recoveryTimer = undefined; void loadDashboard() }, 1_000)
+  } finally { loading.value = false }
+}
+onMounted(loadDashboard)
 const online = () => ui.setNetwork(false)
 const offline = () => ui.setNetwork(true)
 onMounted(() => { addEventListener('online', online); addEventListener('offline', offline) })
-onUnmounted(() => { removeEventListener('online', online); removeEventListener('offline', offline) })
+onUnmounted(() => { removeEventListener('online', online); removeEventListener('offline', offline); if (recoveryTimer) clearTimeout(recoveryTimer); if (syncTimer) clearTimeout(syncTimer) })
 </script>
 
 <template>

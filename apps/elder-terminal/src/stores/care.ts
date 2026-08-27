@@ -50,6 +50,7 @@ export const useCareStore = defineStore('care', {
     lastTrustedAt: null as string | null,
     pendingResubmit: null as PendingResubmit | null,
     blockedAction: null as string | null,
+    recoveryTimer: null as ReturnType<typeof setTimeout> | null,
   }),
   getters: {
     /** 离线判定：应用网络标记，或最近一次加载返回 NETWORK_OFFLINE。 */
@@ -112,7 +113,21 @@ export const useCareStore = defineStore('care', {
         ]);
       } finally {
         this.loading = false;
+        if (this.loadError === 'NETWORK_OFFLINE') this.scheduleRecovery();
+        else this.stopRecovery();
       }
+    },
+    /** BFF 不可达时仅重试只读同步；不重放任何受控命令。 */
+    scheduleRecovery() {
+      if (this.recoveryTimer) return;
+      this.recoveryTimer = setTimeout(() => {
+        this.recoveryTimer = null;
+        void this.refresh();
+      }, 1_000);
+    },
+    stopRecovery() {
+      if (this.recoveryTimer) clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = null;
     },
     /** 记录最后一次可信同步时间（成功加载后调用），并同步给系统状态条。 */
     markTrusted() {

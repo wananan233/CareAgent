@@ -27,8 +27,8 @@ async function terminate(child: ChildProcess): Promise<void> {
   if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
 }
 
-export async function startI0Bff(fault: { status?: number; delaySeconds?: number } = {}): Promise<{ baseUrl: string; stop: () => Promise<void> }> {
-  const port = await reservePort()
+export async function startI0Bff(fault: { status?: number; delaySeconds?: number; port?: number } = {}): Promise<{ baseUrl: string; stop: () => Promise<void> }> {
+  const port = fault.port ?? await reservePort()
   let logs = ''
   const child: ChildProcess = spawn('python', ['-m', 'scripts.run_i0_bff'], { cwd: resolve(process.cwd(), '../..'), env: { ...process.env, CAREHUB_I0_BFF_PORT: String(port), CAREHUB_I0_ELDER_A_TOKEN: i0Tokens.elderA, CAREHUB_I0_FAMILY_A_TOKEN: i0Tokens.familyA, CAREHUB_I0_ELDER_B_TOKEN: i0Tokens.elderB, CAREHUB_I0_FAMILY_B_TOKEN: i0Tokens.familyB, ...(fault.status ? { CAREHUB_I0_TEST_FAULT_STATUS: String(fault.status) } : {}), ...(fault.delaySeconds ? { CAREHUB_I0_TEST_DELAY_SECONDS: String(fault.delaySeconds) } : {}) }, stdio: ['ignore', 'pipe', 'pipe'] })
   child.stdout?.on('data', (chunk: Buffer) => { logs += chunk.toString() })

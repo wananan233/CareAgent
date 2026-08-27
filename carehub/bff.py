@@ -8,6 +8,7 @@ from urllib.parse import unquote
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Mapping
+from threading import RLock
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -33,6 +34,7 @@ class CareBff:
     """不向客户端暴露 EventStore、投影键或原始事件 payload。"""
     def __init__(self, *, core: CareCore, authenticator: Any, model_gateway: ModelGateway | None = None) -> None:
         self.core, self.authenticator = core, authenticator
+        self._connection_lock = RLock()
         self.ledger = ConsentLedger(core.store)
         self.pdp = ServerSidePDP(core.store, self.ledger)
         self.views = AuthorizedProjectionReader(self.pdp, core.projections)
@@ -40,6 +42,11 @@ class CareBff:
         # 默认网关仍是离线 FakeProvider；生产部署必须显式注入由 Linux
         # 进程环境构造的受控网关，BFF 从不读取或保存模型密钥。
         self.agent = AgentOrchestrator(core.store, self.pdp, gateway=model_gateway)
+
+    def handle_request(self, *, method: str, path: str, headers: Mapping[str, str], body: Mapping[str, Any] | None = None) -> BffResponse:
+        """按请求串行化共享 SQLite 连接的完整访问边界。"""
+        with self._connection_lock:
+            return self.handle(method=method, path=path, headers=headers, body=body)
 
     def handle(self, *, method: str, path: str, headers: Mapping[str, str], body: Mapping[str, Any] | None = None) -> BffResponse:
         correlation_id = f"bff-{uuid.uuid4()}"
@@ -255,7 +262,7 @@ def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = (), tes
             if self.path.endswith("/tasks") and test_fault_status:
                 self._write(bff._error(test_fault_status, "UPSTREAM_UNAVAILABLE", "合成下游暂不可用", f"bff-{uuid.uuid4()}")); return
             if self.path.endswith("/tasks") and test_delay_seconds: time.sleep(test_delay_seconds)
-            self._write(bff.handle(method="GET", path=self.path, headers=dict(self.headers.items())))
+            self._write(bff.handle_request(method="GET", path=self.path, headers=dict(self.headers.items())))
         def do_OPTIONS(self) -> None:
             if self.headers.get("Origin") not in allowed_origins:
                 self.send_response(HTTPStatus.FORBIDDEN)
@@ -275,7 +282,7 @@ def make_bff_handler(bff: CareBff, *, allowed_origins: tuple[str, ...] = (), tes
             except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
                 self._write(bff._error(400, "INVALID_REQUEST", "请求正文必须是 JSON 对象", f"bff-{uuid.uuid4()}"))
                 return
-            self._write(bff.handle(method="POST", path=self.path, headers=dict(self.headers.items()), body=decoded))
+            self._write(bff.handle_request(method="POST", path=self.path, headers=dict(self.headers.items()), body=decoded))
         def log_message(self, format: str, *args: Any) -> None: del format, args
     return Handler
 

@@ -44,7 +44,7 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 - 生产构建 Mock 泄漏检查：PASS。Elder/Family production dist 均不含 `MockCoreAdapter`、Mock 故障类型、fixture Agent、DeepSeek 密钥名或 Token 值；开发/测试仍通过构建期别名使用 Mock，生产入口使用禁用桩且不会静默回落。
 - I0-05 故障演示：已有 GSC-06 stop/restart 对账证据；最终双端 outage 证据包待收口。
 - 尚未运行真实 DeepSeek；未读取或设置 `DEEPSEEK_API_KEY`。
-- 尚未完成独立的双端 BFF 停止故障演示与最终 evidence manifest。
+- 双端 BFF outage：PASS；同端口 stop/restart、自动 GET 恢复、零 command 自动重放均已由真实测试覆盖。
 
 ## I0 验收矩阵
 
@@ -61,7 +61,7 @@ VITE_CAREHUB_HOUSEHOLD_ID=household:synthetic-i0
 | Browser Network | ACCEPTED | 双端真实浏览器请求、Family relinquish、错误映射与 correlation_id |
 | Agent citations | PASS | 后端测试 |
 | DeepSeek real provider | NOT RUN | 未配置进程密钥 |
-| BFF outage | IN PROGRESS | GSC-06 stop/restart 证据已通过；双端 outage manifest 待收口 |
+| BFF outage | PASS | Elder/Family 同端口真实 stop/restart 自动 GET 恢复；`artifacts/i0/final/manifest.json` |
 | Mock bundle leakage | PASS | 两端 production dist 静态扫描 |
 
 ## 建议修复顺序
