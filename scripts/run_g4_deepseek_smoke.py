@@ -16,6 +16,7 @@ SUBJECT_ID = "user:g4-smoke"
 FACTS = [
     {"text": "MEDICATION_DUE 于 2026-08-27T09:00:00+08:00 记录，证据状态为 UNKNOWN。", "source_refs": ["evt-g4-smoke-1"]},
 ]
+PURPOSES = ("TODAY_STATUS", "DAILY_SUMMARY", "WEEKLY_TREND", "CHANGE_EXPLANATION", "READ_ONLY_QA")
 
 
 def main() -> None:
@@ -29,15 +30,16 @@ def main() -> None:
             store.register_scope(tenant_id=TENANT_ID, household_id=HOUSEHOLD_ID, subject_id=SUBJECT_ID,
                                  principal_id=SUBJECT_ID, role="SELF")
             ledger = ConsentLedger(store)
-            for purpose in ("TODAY_STATUS", "DAILY_SUMMARY"):
+            for purpose in PURPOSES:
                 consent = ledger.grant(owner=SUBJECT_ID, grantee=SUBJECT_ID, household_id=HOUSEHOLD_ID,
                                        scope="agent_view", purpose=purpose, tenant_id=TENANT_ID)
                 ledger.activate(consent["consent_id"], actor=SUBJECT_ID, expected_version=1)
 
             agent = AgentOrchestrator(store, ServerSidePDP(store, ledger), gateway=gateway)
-            for purpose in ("TODAY_STATUS", "DAILY_SUMMARY"):
+            for purpose in PURPOSES:
                 response = agent.run(context=AuthContext(SUBJECT_ID, TENANT_ID), household_id=HOUSEHOLD_ID,
-                                     subject_id=SUBJECT_ID, purpose=purpose, minimal_context={"facts": FACTS})
+                                     subject_id=SUBJECT_ID, purpose=purpose,
+                                     minimal_context={"facts": FACTS, "question": "今天有哪些已授权记录？"} if purpose == "READ_ONLY_QA" else {"facts": FACTS})
                 run = store.agent_run(response["agent_run_id"])
                 if response["fallback"] != "NONE" or response["facts"] == []:
                     raise RuntimeError(f"{purpose} 未获得受控模型响应：{response['reason_code']}")

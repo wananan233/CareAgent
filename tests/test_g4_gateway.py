@@ -173,3 +173,69 @@ def test_blocking_provider_returns_within_budget_without_retry_or_state_write():
     baseline = len([t for t in threading.enumerate() if t.name.startswith("ThreadPoolExecutor")])
     for _ in range(3): ModelGateway(Blocking(), budget_seconds=.02).generate(purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]})
     assert len([t for t in threading.enumerate() if t.name.startswith("ThreadPoolExecutor")]) <= baseline + 3
+
+
+def test_runtime_cache_and_circuit_are_authorization_scoped():
+    class Provider:
+        version = "runtime"
+        def __init__(self): self.calls = 0; self.fail = False
+        def generate(self, **kwargs):
+            self.calls += 1
+            if self.fail: raise OSError("down")
+            return '{"message":"正常","fact_indexes":[0]}'
+    provider = Provider(); gateway = ModelGateway(provider)
+    context = {"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]}
+    gateway.generate(purpose="TODAY_STATUS", minimal_context=context, authorization_fingerprint="snapshot:a:consent:1:policy:1")
+    gateway.generate(purpose="TODAY_STATUS", minimal_context=context, authorization_fingerprint="snapshot:a:consent:1:policy:1")
+    gateway.generate(purpose="TODAY_STATUS", minimal_context=context, authorization_fingerprint="snapshot:a:consent:2:policy:1")
+    assert (provider.calls, gateway.metrics["cache_hits"]) == (2, 1)
+    provider.fail = True
+    for index in range(3): gateway.generate(purpose="DAILY_SUMMARY", minimal_context=context, authorization_fingerprint=f"fail:{index}")
+    calls = provider.calls
+    assert gateway.generate(purpose="DAILY_SUMMARY", minimal_context=context, authorization_fingerprint="fail:open")["reason_code"] == "CIRCUIT_OPEN"
+    assert provider.calls == calls and gateway._circuit == "OPEN"
+
+
+def test_circuit_half_open_success_closes_and_failure_reopens():
+    class Provider:
+        version = "breaker"
+        def __init__(self): self.fail = True; self.calls = 0
+        def generate(self, **kwargs):
+            self.calls += 1
+            if self.fail: raise OSError("down")
+            return '{"message":"正常","fact_indexes":[0]}'
+    provider = Provider(); gateway = ModelGateway(provider)
+    context = {"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]}
+    for index in range(3): gateway.generate(purpose="TODAY_STATUS", minimal_context=context, authorization_fingerprint=f"f:{index}")
+    gateway._opened_at -= 2
+    provider.fail = False
+    assert gateway.generate(purpose="TODAY_STATUS", minimal_context=context, authorization_fingerprint="probe-ok")["fallback"] == "NONE"
+    assert gateway._circuit == "CLOSED"
+    provider.fail = True
+    for index in range(3): gateway.generate(purpose="TODAY_STATUS", minimal_context=context, authorization_fingerprint=f"f2:{index}")
+    gateway._opened_at -= 2
+    assert gateway.generate(purpose="TODAY_STATUS", minimal_context=context, authorization_fingerprint="probe-fail")["reason_code"] == "MODEL_UNAVAILABLE"
+    assert gateway._circuit == "OPEN"
+
+
+@pytest.mark.parametrize("purpose", ["TODAY_STATUS", "DAILY_SUMMARY", "WEEKLY_TREND", "CHANGE_EXPLANATION", "READ_ONLY_QA"])
+def test_all_purposes_blocking_provider_fallback_within_budget(purpose):
+    import time
+    class Blocking:
+        version = "blocking"
+        def generate(self, **kwargs): time.sleep(.2); return "not-json"
+    started = time.monotonic()
+    result = ModelGateway(Blocking(), budget_seconds=.02).generate(purpose=purpose, minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]})
+    assert result["fallback"] == "TEMPLATE_FALLBACK" and time.monotonic() - started < .15
+
+
+def test_metrics_never_retain_prompt_question_provider_text_or_pii():
+    class Provider:
+        version = "private"
+        def generate(self, **kwargs): return '{"message":"provider-secret-body","fact_indexes":[0]}'
+    gateway = ModelGateway(Provider())
+    marker = "13800000000"
+    result = gateway.generate(purpose="READ_ONLY_QA", minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}], "question": f"电话 {marker}"})
+    assert result["reason_code"] == "QUESTION_DLP_BLOCKED"
+    rendered = str(gateway.metrics)
+    assert marker not in rendered and "provider-secret-body" not in rendered and "question" not in rendered and "任务 UNKNOWN" not in rendered

@@ -21,7 +21,7 @@ class DeepSeekProvider:
         self.base_url, self.timeout_seconds, self._opener = base_url.rstrip("/"), timeout_seconds, opener
         self.version = f"deepseek:{model}"
 
-    def generate(self, *, purpose: str, facts: list[dict[str, Any]]) -> str:
+    def generate(self, *, purpose: str, facts: list[dict[str, Any]], question: str | None = None) -> str:
         api_key = self._api_key or os.environ.get("DEEPSEEK_API_KEY")
         if not api_key:
             raise ModelGatewayError("MODEL_NOT_CONFIGURED")
@@ -33,7 +33,7 @@ class DeepSeekProvider:
         )
         body = {"model": self.model, "messages": [
             {"role": "system", "content": prompt},
-            {"role": "user", "content": json.dumps({"purpose": purpose, "facts": facts}, ensure_ascii=False)},
+            {"role": "user", "content": json.dumps({"purpose": purpose, "facts": facts, "question": question}, ensure_ascii=False)},
         ], "temperature": 0.0, "max_tokens": 320, "stream": False,
             "response_format": {"type": "json_object"}, "thinking": {"type": "disabled"}}
         request = Request(f"{self.base_url}/chat/completions", data=json.dumps(body, ensure_ascii=False).encode("utf-8"),

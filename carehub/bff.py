@@ -16,6 +16,7 @@ from carehub.core.service import CareCore
 from carehub.g3 import AuthContext, AuthorizedProjectionReader, ConsentLedger, ServerSidePDP
 from carehub.sse import AuthorizedStateStream
 from carehub.g4 import AgentOrchestrator, ModelGateway
+from carehub.g4.capabilities import trend_context
 
 
 @dataclass(frozen=True)
@@ -84,12 +85,16 @@ class CareBff:
         parts = parse_path_segments(path)
         if method == "POST" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "requests":
             return self._family_command(context, parts[2], parts[4], body, correlation_id)
+        if method == "POST" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "read-only-qa":
+            if not body or not isinstance(body.get("question"), str):
+                return self._error(422, "INVALID_REQUEST", "问题必须是文本", correlation_id)
+            return self._agent_response(context, parts[2], parts[4], "READ_ONLY_QA", correlation_id, question=body["question"])
         if method == "POST" and len(parts) == 7 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "consents" and parts[6].endswith(":revoke"):
             return self._revoke_subject_scope(context, parts[2], parts[4], parts[6].removesuffix(":revoke"), body, correlation_id)
         if method == "POST" and len(parts) == 7 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "consents" and parts[6].endswith(":relinquish"):
             return self._relinquish_scope(context, parts[2], parts[4], parts[6].removesuffix(":relinquish"), body, correlation_id)
-        if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] in {"today-status", "report"}:
-            purpose = "TODAY_STATUS" if parts[5] == "today-status" else "DAILY_SUMMARY"
+        if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] in {"today-status", "report", "weekly-trend", "change-explanation"}:
+            purpose = {"today-status": "TODAY_STATUS", "report": "DAILY_SUMMARY", "weekly-trend": "WEEKLY_TREND", "change-explanation": "CHANGE_EXPLANATION"}[parts[5]]
             return self._agent_response(context, parts[2], parts[4], purpose, correlation_id)
         if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] in {"tasks", "alerts", "timeline"}:
             household_id, subject_id, kind = parts[2], parts[4], parts[5]
@@ -100,17 +105,24 @@ class CareBff:
             return self._ok(body, correlation_id, etag=body["snapshot_id"])
         return self._error(404, "NOT_FOUND", "接口不存在", correlation_id)
 
-    def _agent_response(self, context: AuthContext, household_id: str, subject_id: str, purpose: str, correlation_id: str) -> BffResponse:
+    def _agent_response(self, context: AuthContext, household_id: str, subject_id: str, purpose: str, correlation_id: str, question: str | None = None) -> BffResponse:
         """从已授权视图构造最小事实，再进入 purpose 受限的 G4 网关。"""
         timeline = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="timeline", purpose="view")
         if timeline["reason_code"] != "ALLOW":
             return self._error(403, "POLICY_DENIED", "当前身份无权访问该视图", correlation_id)
-        facts = [{"text": f"{item.get('event_type', 'UNKNOWN')} 于 {item.get('occurred_at', 'UNKNOWN')} 记录。", "source_refs": [item["event_id"]]}
-                 for item in timeline["items"][:20] if item.get("event_id")]
+        if purpose in {"WEEKLY_TREND", "CHANGE_EXPLANATION"}:
+            capability = trend_context(timeline["items"])
+        else:
+            capability = {"facts": [{"text": f"{item.get('event_type', 'UNKNOWN')} 于 {item.get('occurred_at', 'UNKNOWN')} 记录。", "source_refs": [item["event_id"]]}
+                                    for item in timeline["items"][:20] if item.get("event_id")], "unknowns": [], "why_it_matters": [], "suggested_safe_actions": []}
+        context_data = {"facts": capability["facts"]}
+        if question is not None:
+            context_data["question"] = question
         result = self.agent.run(context=context, household_id=household_id, subject_id=subject_id,
-                                purpose=purpose, minimal_context={"facts": facts})
+                                purpose=purpose, minimal_context=context_data)
         return self._ok({"schema_version": "AgentResponseV1", "response_id": f"response-{uuid.uuid4()}",
-                         "channel": "TERMINAL", **result, "correlation_id": correlation_id}, correlation_id)
+                         "channel": "TERMINAL", **result, **{key: capability[key] for key in ("unknowns", "why_it_matters", "suggested_safe_actions")},
+                         "correlation_id": correlation_id}, correlation_id)
 
     def _family_command(self, context: AuthContext, household_id: str, subject_id: str, body: Mapping[str, Any] | None, correlation_id: str) -> BffResponse:
         """家属端写操作唯一入口：先授权、幂等入站、仅返回最小回执。"""
