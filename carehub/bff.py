@@ -88,13 +88,9 @@ class CareBff:
             return self._revoke_subject_scope(context, parts[2], parts[4], parts[6].removesuffix(":revoke"), body, correlation_id)
         if method == "POST" and len(parts) == 7 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "consents" and parts[6].endswith(":relinquish"):
             return self._relinquish_scope(context, parts[2], parts[4], parts[6].removesuffix(":relinquish"), body, correlation_id)
-        if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] == "report":
-            household_id, subject_id = parts[2], parts[4]
-            timeline = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="timeline", purpose="view")
-            if timeline["reason_code"] != "ALLOW": return self._error(403, "POLICY_DENIED", "当前身份无权访问该视图", correlation_id)
-            facts = [{"text": f"{item.get('event_type', 'UNKNOWN')} 于 {item.get('occurred_at', 'UNKNOWN')} 记录。", "source_refs": [item["event_id"]]} for item in timeline["items"][:20] if item.get("event_id")]
-            result = self.agent.run(context=context, household_id=household_id, subject_id=subject_id, purpose="DAILY_SUMMARY", minimal_context={"facts": facts})
-            return self._ok({"schema_version": "AgentResponseV1", "response_id": f"response-{uuid.uuid4()}", "channel": "FAMILY", **result, "correlation_id": correlation_id}, correlation_id)
+        if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] in {"today-status", "report"}:
+            purpose = "TODAY_STATUS" if parts[5] == "today-status" else "DAILY_SUMMARY"
+            return self._agent_response(context, parts[2], parts[4], purpose, correlation_id)
         if method == "GET" and len(parts) == 6 and parts[:2] == ["v1", "households"] and parts[3] == "subjects" and parts[5] in {"tasks", "alerts", "timeline"}:
             household_id, subject_id, kind = parts[2], parts[4], parts[5]
             body = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind=kind, purpose="view", resource_version=self.core.projections.digest())
@@ -103,6 +99,18 @@ class CareBff:
             body.update({"snapshot_id": self.core.projections.digest(), "server_time": datetime.now(timezone.utc).isoformat(), "freshness": "CURRENT", "correlation_id": correlation_id})
             return self._ok(body, correlation_id, etag=body["snapshot_id"])
         return self._error(404, "NOT_FOUND", "接口不存在", correlation_id)
+
+    def _agent_response(self, context: AuthContext, household_id: str, subject_id: str, purpose: str, correlation_id: str) -> BffResponse:
+        """从已授权视图构造最小事实，再进入 purpose 受限的 G4 网关。"""
+        timeline = self.views.read(context=context, household_id=household_id, subject_id=subject_id, kind="timeline", purpose="view")
+        if timeline["reason_code"] != "ALLOW":
+            return self._error(403, "POLICY_DENIED", "当前身份无权访问该视图", correlation_id)
+        facts = [{"text": f"{item.get('event_type', 'UNKNOWN')} 于 {item.get('occurred_at', 'UNKNOWN')} 记录。", "source_refs": [item["event_id"]]}
+                 for item in timeline["items"][:20] if item.get("event_id")]
+        result = self.agent.run(context=context, household_id=household_id, subject_id=subject_id,
+                                purpose=purpose, minimal_context={"facts": facts})
+        return self._ok({"schema_version": "AgentResponseV1", "response_id": f"response-{uuid.uuid4()}",
+                         "channel": "TERMINAL", **result, "correlation_id": correlation_id}, correlation_id)
 
     def _family_command(self, context: AuthContext, household_id: str, subject_id: str, body: Mapping[str, Any] | None, correlation_id: str) -> BffResponse:
         """家属端写操作唯一入口：先授权、幂等入站、仅返回最小回执。"""

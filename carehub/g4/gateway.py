@@ -78,8 +78,11 @@ class ModelGateway:
                 raise ModelGatewayError("SAFETY_SCAN_BLOCKED")
             return {"message": payload["message"], "facts": [facts[index] for index in payload["fact_indexes"]],
                     "fallback": "NONE", "generator_version": self.provider.version, "reason_code": "ALLOW"}
-        except (ModelGatewayError, TimeoutError, OSError, ValueError, TypeError, json.JSONDecodeError) as error:
+        except ModelGatewayError as error:
             return self._fallback(purpose, str(error) or "MODEL_UNAVAILABLE", [])
+        except (TimeoutError, OSError, ValueError, TypeError, json.JSONDecodeError):
+            # Provider/传输实现细节不得成为响应或审计中的不受控错误文本。
+            return self._fallback(purpose, "MODEL_UNAVAILABLE", [])
 
     @staticmethod
     def _minimize(context: Mapping[str, Any]) -> list[dict[str, Any]]:

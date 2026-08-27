@@ -116,6 +116,24 @@ def test_dlp_and_authorized_orchestrator(tmp_path):
     assert AgentOrchestrator(store, pdp).run(context=AuthContext("user:alice", "tenant:a"), household_id="household:a", subject_id="user:alice", purpose="CHAT", minimal_context={"facts": []})["reason_code"] == "PURPOSE_DENIED"
     store.close()
 
+
+def test_agent_policy_rejection_writes_minimal_run_without_calling_provider(tmp_path):
+    class MustNotCall:
+        version = "must-not-call.v1"
+        def generate(self, **kwargs):
+            raise AssertionError("被拒绝请求不得调用 provider")
+
+    store = EventStore(tmp_path / "denied-agent.db")
+    store.register_scope(tenant_id="tenant:a", household_id="household:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    result = AgentOrchestrator(store, ServerSidePDP(store, ConsentLedger(store)), gateway=ModelGateway(MustNotCall())).run(
+        context=AuthContext("user:alice", "tenant:a"), household_id="household:a", subject_id="user:alice",
+        purpose="TODAY_STATUS", minimal_context={"facts": [{"text": "任务 UNKNOWN", "source_refs": ["evt"]}]},
+    )
+    run = store.agent_run(result["agent_run_id"])
+    assert result["fallback"] == "TEMPLATE_FALLBACK" and result["reason_code"] == "POLICY_DENIED"
+    assert run and run["status"] == "REJECTED" and run["source_refs"] == ["evt"]
+    store.close()
+
 def test_gateway_cancel_retry_budget_and_dlp_zero_provider_leakage():
     class Flaky:
         version = "flaky"

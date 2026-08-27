@@ -13,8 +13,9 @@ from carehub.g4 import ModelGateway
 def activate_view_consent(core, *, actor="user:alice", household_id="home:a"):
     consent = ConsentLedger(core.store).grant(owner="user:alice", grantee=actor, household_id=household_id, scope="view", purpose="view", tenant_id="tenant:a")
     active = ConsentLedger(core.store).activate(consent["consent_id"], actor="user:alice", expected_version=1)
-    agent = ConsentLedger(core.store).grant(owner="user:alice", grantee=actor, household_id=household_id, scope="agent_view", purpose="DAILY_SUMMARY", tenant_id="tenant:a")
-    ConsentLedger(core.store).activate(agent["consent_id"], actor="user:alice", expected_version=1)
+    for purpose in ("TODAY_STATUS", "DAILY_SUMMARY"):
+        agent = ConsentLedger(core.store).grant(owner="user:alice", grantee=actor, household_id=household_id, scope="agent_view", purpose=purpose, tenant_id="tenant:a")
+        ConsentLedger(core.store).activate(agent["consent_id"], actor="user:alice", expected_version=1)
     stream = ConsentLedger(core.store).grant(owner="user:alice", grantee=actor, household_id=household_id, scope="view", purpose="stream", channel="SSE", tenant_id="tenant:a")
     ConsentLedger(core.store).activate(stream["consent_id"], actor="user:alice", expected_version=1)
     return active
@@ -66,6 +67,54 @@ def test_bff_report_uses_authorized_minimal_timeline_context(tmp_path):
     response = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/report", headers={"Authorization": "Bearer alice"})
     assert response.status == 200 and response.body["fallback"] == "NONE"
     assert response.body["facts"][0]["source_refs"] == ["evt-safe"] and "raw" not in str(response.body)
+    core.close()
+
+
+def test_bff_today_status_and_report_use_separate_purpose_consents_and_agent_runs(tmp_path):
+    class OfflineProvider:
+        version = "offline-test.v1"
+        def __init__(self): self.purposes = []
+        def generate(self, *, purpose, facts):
+            self.purposes.append(purpose)
+            assert facts == [{"text": "MEDICATION_DUE 于 2026-08-22T09:00:00+00:00 记录。", "source_refs": ["evt-safe"]}]
+            return '{"message":"仅基于授权记录。","fact_indexes":[0]}'
+
+    core = CareCore(tmp_path / "today-status.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
+    core.projections.timeline.append({"event_id": "evt-safe", "event_type": "MEDICATION_DUE", "occurred_at": "2026-08-22T09:00:00+00:00", "tenant_id": "tenant:a", "household_id": "home:a", "subject_id": "user:alice", "raw": "hidden"})
+    provider = OfflineProvider()
+    bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"), model_gateway=ModelGateway(provider))
+    headers = {"Authorization": "Bearer alice"}; root = "/v1/households/home:a/subjects/user:alice"
+    today = bff.handle(method="GET", path=f"{root}/today-status", headers=headers)
+    report = bff.handle(method="GET", path=f"{root}/report", headers=headers)
+    assert [today.status, report.status] == [200, 200]
+    assert provider.purposes == ["TODAY_STATUS", "DAILY_SUMMARY"]
+    for response in (today, report):
+        assert response.body["schema_version"] == "AgentResponseV1"
+        assert response.body["channel"] == "TERMINAL"
+        assert response.body["facts"] == [{"text": "MEDICATION_DUE 于 2026-08-22T09:00:00+00:00 记录。", "source_refs": ["evt-safe"]}]
+        run = core.store.agent_run(response.body["agent_run_id"])
+        assert run and run["status"] == "COMPLETED" and run["source_refs"] == ["evt-safe"]
+        assert "raw" not in str(response.body) and "raw" not in str(run)
+    core.close()
+
+
+def test_bff_today_status_returns_controlled_fallback_and_agent_run_without_network(tmp_path):
+    core = CareCore(tmp_path / "today-status-fallback.db")
+    core.store.register_scope(tenant_id="tenant:a", household_id="home:a", subject_id="user:alice", principal_id="user:alice", role="SELF")
+    activate_view_consent(core)
+    core.projections.timeline.append({"event_id": "evt-safe", "event_type": "MEDICATION_DUE", "occurred_at": "2026-08-22T09:00:00+00:00", "tenant_id": "tenant:a", "household_id": "home:a", "subject_id": "user:alice"})
+    class OfflineFailure:
+        version = "offline-failure.v1"
+        def generate(self, **kwargs): raise OSError("network disabled")
+    bff = CareBff(core=core, authenticator=StaticTokenAuthenticator({"alice": "user:alice"}, tenant_id="tenant:a"), model_gateway=ModelGateway(OfflineFailure()))
+    response = bff.handle(method="GET", path="/v1/households/home:a/subjects/user:alice/today-status", headers={"Authorization": "Bearer alice"})
+    run = core.store.agent_run(response.body["agent_run_id"])
+    assert response.status == 200
+    assert response.body["fallback"] == "TEMPLATE_FALLBACK"
+    assert response.body["facts"] == []
+    assert run and run["status"] == "COMPLETED" and run["reason_code"] == "MODEL_UNAVAILABLE" and run["source_refs"] == ["evt-safe"]
     core.close()
 
 
