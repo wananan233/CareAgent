@@ -49,6 +49,10 @@ export interface AgentResponseV1 {
   facts: AgentFactV1[]
   fallback: AgentFallback
   generator_version: string
+  unknowns?: Array<{ field: string; reason: string }>
+  why_it_matters?: string[]
+  suggested_safe_actions?: string[]
+  correlation_id?: string
 }
 export interface ConsentRevokeReceiptV1 { scope: string; status: 'REVOKED'; revoked_at: string; version: number }
 

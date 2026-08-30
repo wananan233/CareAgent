@@ -14,6 +14,7 @@ defineProps<{ name: string; size?: number }>()
     <template v-else-if="name === 'lock'"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></template>
     <template v-else-if="name === 'chevron'"><path d="m9 18 6-6-6-6"/></template>
     <template v-else-if="name === 'check'"><path d="m5 12 4 4L19 6"/></template>
+    <template v-else-if="name === 'sparkles'"><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></template>
     <template v-else><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></template>
   </svg>
 </template>

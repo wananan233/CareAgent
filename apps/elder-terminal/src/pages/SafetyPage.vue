@@ -40,6 +40,11 @@ onMounted(() => {
         <AlertCard :alert="a" @acknowledge="care.acknowledgeAlert(a.alert_id)" />
       </li>
     </ul>
+    <section v-if="care.alerts.length" class="safety__agent">
+      <strong>✦ CareAgent 可以帮您解释这条信息</strong>
+      <p>这是一个需要立即关注的安全提醒。CareAgent 只负责说明信息，不能解除、降低或处理安全事件。</p>
+      <RouterLink to="/agent">听听简单说明</RouterLink>
+    </section>
   </PageShell>
 </template>
 
@@ -52,4 +57,5 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--space-md);
 }
+.safety__agent{display:flex;flex-direction:column;gap:var(--space-sm);padding:var(--space-md);border-radius:var(--radius-lg);background:#eef4f1}.safety__agent p{margin:0}.safety__agent a{color:var(--color-brand);font-weight:700}
 </style>

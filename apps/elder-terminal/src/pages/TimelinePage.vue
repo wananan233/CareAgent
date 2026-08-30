@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import PageShell from '@/components/PageShell.vue';
 import StateView from '@/components/StateView.vue';
 import QualityBadge from '@/components/QualityBadge.vue';
@@ -8,6 +9,7 @@ import { CARE_EVENT_LABEL, loadStateFor } from '@/contracts/displayMapping';
 import type { CareEventV1 } from '@carehub/shared-contracts/elder';
 
 const care = useCareStore();
+const route = useRoute();
 const errorState = computed(() => (care.loadError ? loadStateFor(care.loadError) : null));
 
 function timeLabel(e: CareEventV1): string {
@@ -25,7 +27,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageShell title="时间线">
+  <PageShell :title="route.path === '/reminders' ? '提醒' : '时间线'">
     <StateView
       v-if="care.loading && care.timeline.length === 0"
       variant="loading"
@@ -41,7 +43,7 @@ onMounted(() => {
       v-else-if="care.timeline.length === 0"
       variant="empty"
       title="暂无时间线记录"
-      description="今天还没有模拟事件。"
+      description="今天还没有新的记录。"
     />
     <ol v-else class="timeline">
       <li v-for="e in care.timeline" :key="e.event_id" class="timeline__item">
@@ -50,7 +52,7 @@ onMounted(() => {
           <span class="timeline__label">{{ CARE_EVENT_LABEL[e.event_type] }}</span>
           <QualityBadge :quality="e.quality.status" :reason="e.quality.reason" />
         </div>
-        <p class="timeline__source">来源：{{ e.source.type }}（{{ e.source.simulator_id }}）</p>
+        <p class="timeline__source">来源：CareHub 提醒记录</p>
       </li>
     </ol>
   </PageShell>

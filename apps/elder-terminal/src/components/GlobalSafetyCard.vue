@@ -29,10 +29,10 @@ onMounted(() => {
 
 <template>
   <aside v-if="critical" class="global-safety" aria-label="紧急安全提示">
-    <span class="global-safety__level">{{ critical.safety_level }}</span>
+    <span class="global-safety__icon" aria-hidden="true">!</span>
     <div class="global-safety__body">
-      <strong class="global-safety__kind">{{ ALERT_KIND_LABEL[critical.kind] }}</strong>
-      <span class="global-safety__note">紧急安全事件，请立即关注</span>
+      <strong class="global-safety__kind">紧急安全提醒</strong>
+      <span class="global-safety__note">检测到{{ ALERT_KIND_LABEL[critical.kind] }}信息，请立即关注</span>
     </div>
     <RouterLink :to="`/alert/${critical.alert_id}`" class="global-safety__action">
       查看详情
@@ -47,12 +47,13 @@ onMounted(() => {
   gap: var(--space-md);
   padding: var(--space-md);
   margin-bottom: var(--space-md);
-  border: 3px solid var(--color-danger);
+  border: 0;
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: #fce9e7;
+  box-shadow: 0 4px 12px rgba(179, 38, 30, .12);
 }
 
-.global-safety__level {
+.global-safety__icon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -60,8 +61,8 @@ onMounted(() => {
   min-width: 64px;
   min-height: 64px;
   border-radius: var(--radius-md);
-  background: var(--color-danger);
-  color: var(--color-text-on-dark);
+  background: #d44a40;
+  color: white;
   font-size: var(--font-size-main);
   font-weight: 900;
 }
@@ -79,7 +80,7 @@ onMounted(() => {
 
 .global-safety__note {
   font-size: var(--font-size-body);
-  color: var(--color-danger);
+  color: #9d241e;
   font-weight: 700;
 }
 
@@ -89,7 +90,7 @@ onMounted(() => {
   justify-content: center;
   min-height: var(--touch-min-target);
   padding: 0 var(--space-md);
-  border: 2px solid var(--color-danger);
+  border: 0;
   border-radius: var(--radius-md);
   background: var(--color-danger);
   color: var(--color-text-on-dark);

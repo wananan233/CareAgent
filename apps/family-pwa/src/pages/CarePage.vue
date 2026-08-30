@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
-import { coreAdapter } from '@/services/adapter'
+import { coreAdapter, currentSubjectId } from '@/services/adapter'
 import { useUiStore } from '@/stores/ui'
 const ui = useUiStore()
 const busy = ref(false)
@@ -11,7 +11,7 @@ const labels = { SEND_CARE_NOTE: '发送关怀问候', REMINDER_PREFERENCE: '调
 async function confirm() {
   if (!selected.value || busy.value) return
   busy.value = true
-  try { const result = await coreAdapter.createCareRequest('subject-demo-parent-01', selected.value, `care-${selected.value}`); ui.addCareHistory(result); toast.value = '请求已记录'; selected.value = null; setTimeout(() => toast.value = '', 2200) }
+  try { const result = await coreAdapter.createCareRequest(currentSubjectId, selected.value, `care-${selected.value}`); ui.addCareHistory(result); toast.value = '请求已记录'; selected.value = null; setTimeout(() => toast.value = '', 2200) }
   finally { busy.value = false }
 }
 </script>
@@ -24,6 +24,7 @@ async function confirm() {
       <button class="action-card" @click="selected='SEND_CARE_NOTE'"><span class="row-icon pink"><AppIcon name="heart" /></span><b>关怀问候</b><small>提交一条预设问候请求</small><em>推荐</em></button>
       <button class="action-card" @click="selected='REMINDER_PREFERENCE'"><span class="row-icon blue"><AppIcon name="bell" /></span><b>提醒偏好</b><small>申请调整普通提醒方式</small></button>
     </section>
+    <section class="contact-suggestion"><span class="row-icon amber"><AppIcon name="pill" /></span><div><p>建议联系</p><h2>有 1 项状态建议确认</h2><small>可以联系老人确认提醒是否完成。</small></div><button type="button" @click="selected='SEND_CARE_NOTE'">联系老人确认</button></section>
     <div class="section-heading"><h2>本次会话记录</h2><span>{{ ui.careHistory.length }} 条</span></div>
     <section class="ios-list">
       <div v-if="!ui.careHistory.length" class="empty-row"><span><AppIcon name="clock" /></span><div><b>暂无操作</b><small>提交后的回执会保留在本次会话中</small></div></div>

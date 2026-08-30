@@ -38,6 +38,8 @@ export interface ElderTerminalApi {
     request: CareRequestV1,
   ): Promise<AdapterResult<RequestReceiptV1>>;
   chat(subjectId: SubjectId, text: string): Promise<AdapterResult<AgentResponseV1>>;
+  /** Elder only consumes these two read-only BFF projections; it never calls a Provider. */
+  getAgent(subjectId: SubjectId, capability: 'TODAY_STATUS' | 'DAILY_SUMMARY'): Promise<AdapterResult<AgentResponseV1>>;
   revokeConsent(subjectId: SubjectId, scope: ConsentScope): Promise<AdapterResult<ConsentViewV1>>;
 }
 

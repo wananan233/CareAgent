@@ -237,12 +237,15 @@ export const useCareStore = defineStore('care', {
       }
     },
     /** 询问 Agent：回复必须通过 guard 校验；无来源事实/越界回复一律不渲染原始文本。 */
-    async askAgent(text: string): Promise<void> {
+    async askAgent(capability: 'TODAY_STATUS' | 'DAILY_SUMMARY' | string = 'TODAY_STATUS'): Promise<void> {
       this.agentLoading = true;
       this.agent = null;
       this.agentError = null;
       try {
-        const result = await this.api.chat(this.subjectId, text);
+        // Legacy callers may pass explanatory button text; that never becomes a free-form
+        // prompt. It deterministically maps to the BFF's TODAY_STATUS projection.
+        const purpose = capability === 'DAILY_SUMMARY' ? 'DAILY_SUMMARY' : 'TODAY_STATUS';
+        const result = await this.api.getAgent(this.subjectId, purpose);
         if (!result.ok) {
           this.agentError = result.error.reason_code ?? result.error.code;
           return;

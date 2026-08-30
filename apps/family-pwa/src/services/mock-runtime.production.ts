@@ -13,7 +13,8 @@ export class DemoAdapter implements CoreAdapter {
   getTasks(): never { return this.fail() }
   getTimeline(): never { return this.fail() }
   createCareRequest(): never { return this.fail() }
-  getReport(): never { return this.fail() }
+  getAgent(): never { return this.fail() }
+  askReadOnly(): never { return this.fail() }
   revokeConsent(): never { return this.fail() }
   relinquishConsent(): never { return this.fail() }
 }

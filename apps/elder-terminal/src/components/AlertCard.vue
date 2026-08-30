@@ -23,11 +23,11 @@ const timeLabel = computed(() =>
 <template>
   <article class="alert-card" :class="{ 'alert-card--critical': isCritical }">
     <div class="alert-card__head">
-      <span class="alert-card__level">{{ alert.safety_level }}</span>
-      <h2 class="alert-card__kind">{{ ALERT_KIND_LABEL[alert.kind] }}</h2>
+      <span class="alert-card__level" aria-hidden="true">!</span>
+      <h2 class="alert-card__kind">紧急安全提醒</h2>
       <span class="alert-card__status">{{ ALERT_STATUS_LABEL[alert.status] }}</span>
     </div>
-    <p class="alert-card__time">发生时间：{{ timeLabel }}</p>
+    <p class="alert-card__time">检测到{{ ALERT_KIND_LABEL[alert.kind] }}信息 · {{ timeLabel }}</p>
     <div class="alert-card__actions">
       <RouterLink :to="`/alert/${alert.alert_id}`" class="alert-card__view">
         查看详情

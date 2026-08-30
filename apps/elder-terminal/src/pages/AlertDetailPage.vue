@@ -5,7 +5,6 @@ import PageShell from '@/components/PageShell.vue';
 import StateView from '@/components/StateView.vue';
 import { useCareStore } from '@/stores/care';
 import {
-  ALERT_KIND_LABEL,
   ALERT_STATUS_LABEL,
   loadStateFor,
 } from '@/contracts/displayMapping';
@@ -73,12 +72,8 @@ async function acknowledge() {
     <template v-else>
       <dl class="detail">
         <div class="detail__row">
-          <dt class="detail__term">告警类型</dt>
-          <dd class="detail__desc">{{ ALERT_KIND_LABEL[alert.kind] }}</dd>
-        </div>
-        <div class="detail__row">
-          <dt class="detail__term">安全等级</dt>
-          <dd class="detail__desc">{{ alert.safety_level }}</dd>
+          <dt class="detail__term">提醒类型</dt>
+          <dd class="detail__desc">紧急安全提醒</dd>
         </div>
         <div class="detail__row">
           <dt class="detail__term">状态</dt>
@@ -90,11 +85,7 @@ async function acknowledge() {
         </div>
         <div class="detail__row">
           <dt class="detail__term">来源</dt>
-          <dd class="detail__desc">模拟数据（SIMULATOR）</dd>
-        </div>
-        <div class="detail__row">
-          <dt class="detail__term">数据版本</dt>
-          <dd class="detail__desc">{{ alert.version }}</dd>
+          <dd class="detail__desc">CareHub 系统记录</dd>
         </div>
       </dl>
 

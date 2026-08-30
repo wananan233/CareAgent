@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import type { AlertViewV1, RequestReceiptV1 } from '@carehub/shared-contracts'
 import AppIcon from '@/components/AppIcon.vue'
-import { coreAdapter } from '@/services/adapter'
+import { coreAdapter, currentSubjectId } from '@/services/adapter'
 import { useUiStore } from '@/stores/ui'
 const props = defineProps({ id: { type: String, required: true } })
 const ui = useUiStore()
@@ -11,8 +11,8 @@ const receipt = ref<RequestReceiptV1 | null>(null)
 const busy = ref(false)
 const failure = ref('')
 const occurred = computed(() => alert.value ? new Date(alert.value.occurred_at).toLocaleString('zh-CN', { month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '')
-onMounted(async () => { alert.value = (await coreAdapter.getAlerts('subject-demo-parent-01')).find(x => x.alert_id === props.id) ?? null })
-async function viewed() { if (!alert.value || busy.value || receipt.value) return; busy.value = true; failure.value = ''; try { receipt.value = await coreAdapter.acknowledgeAlert('subject-demo-parent-01', alert.value.alert_id, { command_id: crypto.randomUUID(), idempotency_key: `viewed-${alert.value.alert_id}`, expected_version: alert.value.version, reason_code: 'ACKNOWLEDGE_VIEWED' }); ui.markAlertViewed(alert.value.alert_id) } catch { failure.value = '请求未成功，请稍后重试。' } finally { busy.value = false } }
+onMounted(async () => { alert.value = (await coreAdapter.getAlerts(currentSubjectId)).find(x => x.alert_id === props.id) ?? null })
+async function viewed() { if (!alert.value || busy.value || receipt.value) return; busy.value = true; failure.value = ''; try { receipt.value = await coreAdapter.acknowledgeAlert(currentSubjectId, alert.value.alert_id, { command_id: crypto.randomUUID(), idempotency_key: `viewed-${alert.value.alert_id}`, expected_version: alert.value.version, reason_code: 'ACKNOWLEDGE_VIEWED' }); ui.markAlertViewed(alert.value.alert_id) } catch { failure.value = '请求未成功，请稍后重试。' } finally { busy.value = false } }
 </script>
 <template>
   <main class="detail-shell">

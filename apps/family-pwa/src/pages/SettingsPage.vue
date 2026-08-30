@@ -17,6 +17,8 @@ function logout() { ui.clearSensitiveState(); router.replace('/error/SIGNED_OUT'
       <div class="list-row"><span class="row-icon blue"><AppIcon name="bell" /></span><span class="row-main"><b>站内模拟通知</b><small>不发送真实 Push、短信或电话</small></span><button class="switch" :class="{on:localNotices}" :aria-pressed="localNotices" @click="localNotices=!localNotices"><i></i></button></div>
       <div class="list-row"><span class="row-icon purple"><AppIcon name="user" /></span><span class="row-main"><b>当前家庭成员</b><small>演示家庭成员</small></span><AppIcon name="chevron" class="chevron" /></div>
     </section>
+    <div class="section-heading"><h2>CareHub AI</h2></div>
+    <section class="ios-list settings-list"><div class="list-row"><span class="row-icon blue"><AppIcon name="chart" /></span><span class="row-main"><b>智能分析</b><small>仅基于已授权照护记录</small></span><span class="status success">ON</span></div><div class="list-row"><span class="row-icon green"><AppIcon name="check" /></span><span class="row-main"><b>AI 服务状态</b><small>提醒、告警和时间线不会依赖 AI 服务</small></span><span class="status success">可用</span></div></section>
     <div class="section-heading"><h2>隐私与授权</h2></div>
     <section class="ios-list settings-list">
       <div class="list-row"><span class="row-icon green"><AppIcon name="lock" /></span><span class="row-main"><b>今日概览读取</b><small>用于展示经授权的家庭摘要</small></span><span class="status success">有效</span></div>

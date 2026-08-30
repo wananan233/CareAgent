@@ -15,12 +15,12 @@ export const QUALITY_LABEL: Record<QualityStatus, string> = {
   VALID: '信息可信',
   LOW: '信息待确认',
   CONFLICT: '信息冲突',
-  UNKNOWN: '暂未确认',
+  UNKNOWN: '完成情况待确认',
 };
 
 /** 证据状态 → 文案。家庭端契约只允许 UNKNOWN，不推断服药事实。 */
 export const EVIDENCE_LABEL: Record<EvidenceState, string> = {
-  UNKNOWN: '暂未确认',
+  UNKNOWN: '完成情况待确认',
 };
 
 /** 任务状态 → 文案。ACKNOWLEDGED 只表达“已看到提醒”。 */
@@ -31,11 +31,11 @@ export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
 };
 
 export const TASK_KIND_LABEL: Record<TaskKind, string> = {
-  MEDICATION_DUE: '按时服药',
+  MEDICATION_DUE: '用药提醒',
 };
 
 export const CARE_EVENT_LABEL: Record<CareEventType, string> = {
-  MEDICATION_DUE: '服药提醒',
+  MEDICATION_DUE: '用药提醒',
   SMOKE_GAS: '烟雾/燃气告警',
   LOW_QUALITY_ACTIVITY: '活动数据待确认',
 };

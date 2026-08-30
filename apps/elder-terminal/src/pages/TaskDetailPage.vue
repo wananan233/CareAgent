@@ -55,7 +55,7 @@ async function acknowledge() {
 </script>
 
 <template>
-  <PageShell title="任务详情">
+  <PageShell title="提醒详情">
     <StateView v-if="care.loading && !task" variant="loading" title="正在加载" />
     <StateView
       v-else-if="errorState"
@@ -72,7 +72,7 @@ async function acknowledge() {
     <template v-else>
       <dl class="detail">
         <div class="detail__row">
-          <dt class="detail__term">任务</dt>
+          <dt class="detail__term">提醒</dt>
           <dd class="detail__desc">{{ TASK_KIND_LABEL[task.kind] }}</dd>
         </div>
         <div class="detail__row">
@@ -84,16 +84,12 @@ async function acknowledge() {
           <dd class="detail__desc">{{ TASK_STATUS_LABEL[task.status] }}</dd>
         </div>
         <div class="detail__row">
-          <dt class="detail__term">证据状态</dt>
+          <dt class="detail__term">完成情况</dt>
           <dd class="detail__desc">{{ EVIDENCE_LABEL[task.evidence_state] }}</dd>
         </div>
         <div class="detail__row">
           <dt class="detail__term">来源</dt>
-          <dd class="detail__desc">模拟数据（SIMULATOR）</dd>
-        </div>
-        <div class="detail__row">
-          <dt class="detail__term">数据版本</dt>
-          <dd class="detail__desc">{{ task.version }}</dd>
+          <dd class="detail__desc">CareHub 提醒记录</dd>
         </div>
       </dl>
 
@@ -106,7 +102,8 @@ async function acknowledge() {
       >
         {{ ACKNOWLEDGE_ACTION_LABEL }}
       </button>
-      <p v-else class="detail__done">已确认看到提醒，证据状态仍为“暂未确认”。</p>
+      <p v-else class="detail__done">已确认看到提醒；系统仍不能确认是否已经完成。</p>
+      <RouterLink to="/agent" class="detail__agent">✦ CareAgent：为什么还是待确认？</RouterLink>
       <p v-if="feedback" class="detail__feedback" role="status">{{ feedback }}</p>
     </template>
   </PageShell>
@@ -159,6 +156,8 @@ async function acknowledge() {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.detail__agent { display:inline-flex; align-items:center; min-height:var(--touch-min-target); color:var(--color-brand); font-size:var(--font-size-body); font-weight:700; }
 
 .detail__done {
   margin: 0;

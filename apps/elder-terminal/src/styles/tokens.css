@@ -1,16 +1,19 @@
 :root {
   --font-scale: 1;
 
-  --color-text-primary: #1a1a1a;
+  --color-text-primary: #292622;
   --color-text-on-dark: #ffffff;
-  --color-background: #f7f5f0;
-  --color-surface: #ffffff;
-  --color-brand: #0b3d2e;
+  --color-background: #f6f3ed;
+  --color-surface: #fffdf9;
+  --color-surface-muted: #eeeae2;
+  /* 暖米白基底搭配低饱和青绿品牌色，避免大面积棕橙。 */
+  --color-brand: #467d76;
+  --color-brand-soft: #dcebe6;
   --color-danger: #b3261e;
   --color-warning: #8a5a00;
   --color-info: #1f4e79;
   --color-success: #1e6b3a;
-  --color-focus-ring: #f0a500;
+  --color-focus-ring: #ead5bf;
 
   --font-size-body: calc(24px * var(--font-scale));
   --font-size-main: calc(32px * var(--font-scale));

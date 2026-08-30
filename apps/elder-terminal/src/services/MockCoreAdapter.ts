@@ -203,6 +203,9 @@ export class MockCoreAdapter implements ElderTerminalApi, DevelopmentFaultInject
       data: text.trim() === '' ? fixtureAgentFallback() : fixtureAgentResponse(),
     };
   }
+  async getAgent(subjectId: SubjectId, _capability: 'TODAY_STATUS' | 'DAILY_SUMMARY'): Promise<AdapterResult<AgentResponseV1>> {
+    return this.chat(subjectId, 'today');
+  }
 
   async revokeConsent(
     subjectId: SubjectId,

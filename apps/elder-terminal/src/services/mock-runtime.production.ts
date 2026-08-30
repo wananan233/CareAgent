@@ -13,5 +13,6 @@ export class DemoAdapter implements ElderTerminalApi {
   getAlerts(): never { return this.fail(); }
   submitRequest(): never { return this.fail(); }
   chat(): never { return this.fail(); }
+  getAgent(): never { return this.fail(); }
   revokeConsent(): never { return this.fail(); }
 }

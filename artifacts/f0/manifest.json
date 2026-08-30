@@ -1,0 +1,30 @@
+{
+  "gate": "F0 software closeout",
+  "branch": "f0-windows",
+  "status": "PASS_WITH_ENVIRONMENT_LIMITATION",
+  "scope": {
+    "family_a0_capabilities": ["TODAY_STATUS", "DAILY_SUMMARY", "WEEKLY_TREND", "CHANGE_EXPLANATION", "READ_ONLY_QA"],
+    "elder_a0_capabilities": ["TODAY_STATUS", "DAILY_SUMMARY"]
+  },
+  "controls": {
+    "bff_only": true,
+    "provider_browser_access": false,
+    "agent_dto_fields_rendered": ["source_refs", "unknowns", "why_it_matters", "suggested_safe_actions", "fallback"],
+    "error_correlation_id": true,
+    "offline_stale_recovery": true,
+    "consent_revoke": true,
+    "cross_household_denial": true,
+    "idempotency": true
+  },
+  "verification": {
+    "python_a0_bff": "340 passed (tests/test_c2_bff.py + tests/test_a0_ai_eval.py)",
+    "family_production_build": "PASS",
+    "elder_production_build": "PASS",
+    "production_bundle_forbidden_markers": {"family": 0, "elder": 0},
+    "ui_bff_process_tests": "NOT_RUN: sandbox child-process launch returns Windows spawn EPERM; BFF route behavior is covered by Python regression"
+  },
+  "evidence": {
+    "existing_demo_screenshots": "apps/family-pwa/tests/e2e/mobile-widths.spec.ts-snapshots/",
+    "rollback": "artifacts/f0/ROLLBACK.md"
+  }
+}

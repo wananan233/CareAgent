@@ -10,6 +10,7 @@ export const useAppStore = defineStore('app', {
     fontScale: 1 as FontScale,
     soundEnabled: false,
     nonCriticalReminders: true,
+    agentEnabled: true,
     offline: false,
     lastSyncAt: null as string | null,
     errorCode: null as string | null,
@@ -25,6 +26,7 @@ export const useAppStore = defineStore('app', {
     setNonCriticalReminders(enabled: boolean) {
       this.nonCriticalReminders = enabled;
     },
+    setAgentEnabled(enabled: boolean) { this.agentEnabled = enabled; },
     setOffline(offline: boolean) {
       this.offline = offline;
     },
