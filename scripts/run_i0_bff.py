@@ -24,7 +24,7 @@ def build(tokens: Mapping[str, str]) -> CareBff:
         for actor, role in ((elder, "SELF"), (family, "FAMILY")):
             core.store.register_scope(tenant_id=TENANT, household_id=household, subject_id=elder, principal_id=actor, role=role)
             ledger = ConsentLedger(core.store)
-            for scope, purpose, channel in (("view", "view", "TERMINAL"), ("view", "stream", "SSE"), ("agent_view", "DAILY_SUMMARY", "TERMINAL")):
+            for scope, purpose, channel in (("view", "view", "TERMINAL"), ("view", "stream", "SSE"), ("agent_view", "DAILY_SUMMARY", "TERMINAL"), ("agent_view", "TODAY_STATUS", "TERMINAL")):
                 consent = ledger.grant(owner=elder, grantee=actor, household_id=household, scope=scope, purpose=purpose, channel=channel, tenant_id=TENANT)
                 ledger.activate(consent["consent_id"], actor=elder, expected_version=1)
         scenario = ScenarioService(core)
